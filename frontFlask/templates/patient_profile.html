@@ -1,0 +1,213 @@
+{% extends "base.html" %}
+
+{% block title %}Perfil do Paciente - Sistema de IA{% endblock %}
+
+{% block extra_css %}
+<style>
+    .markdown-content h3.markdown-subheader {
+        font-size: 1.25em;
+        color: #4a6fa5;
+        margin-top: 1.5rem;
+        margin-bottom: 0.75rem;
+        font-weight: 600;
+    }
+
+    .markdown-content .markdown-header {
+        font-weight: bold;
+        color: #4a6fa5;
+    }
+
+    .markdown-content ul, .markdown-content ol {
+        padding-left: 1.5rem;
+        margin-bottom: 1rem;
+    }
+
+    .markdown-content li {
+        margin-bottom: 0.25rem;
+    }
+
+    .markdown-content p {
+        margin-bottom: 1rem;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2><i class="bi bi-person-circle"></i> Perfil do Paciente</h2>
+    <a href="{{ url_for('patients_list') }}" class="btn btn-outline-secondary">
+        <i class="bi bi-people"></i> Ver Todos
+    </a>
+</div>
+
+{% if profile %}
+<div class="row">
+    <div class="col-md-4">
+        <div class="card">
+            <div class="card-header">
+                <i class="bi bi-person-badge"></i> Informações Básicas
+            </div>
+            <div class="card-body">
+                <p><strong>ID:</strong> {{ patient_id }}</p>
+                <p><strong>Nome:</strong> {{ profile.patient_info.first_name or '' }} {{ profile.patient_info.last_name or '' }}{% if not profile.patient_info.first_name and not profile.patient_info.last_name %}Não informado{% endif %}</p>
+                <p><strong>Idade:</strong> {{ profile.patient_info.age or 'Não informado' }}</p>
+                <p class="mb-0"><strong>Status:</strong>
+                    <span class="badge bg-success">Ativo</span>
+                </p>
+            </div>
+        </div>
+
+        <div class="card mt-3">
+            <div class="card-header">
+                <i class="bi bi-clipboard-pulse"></i> Diagnóstico e Características
+            </div>
+            <div class="card-body">
+                <p><strong>Diagnóstico:</strong></p>
+                <div class="markdown-content">
+                    {% if profile.patient_info.diagnosis %}
+                        {{ profile.patient_info.diagnosis | safe }}
+                    {% else %}
+                        Não informado
+                    {% endif %}
+                </div>
+                <p><strong>Neurotipo:</strong></p>
+                <div class="markdown-content">
+                    {% if profile.patient_info.neurotype %}
+                        {{ profile.patient_info.neurotype | safe }}
+                    {% else %}
+                        Não informado
+                    {% endif %}
+                </div>
+                <p><strong>Nível:</strong></p>
+                <div class="markdown-content">
+                    {% if profile.patient_info.level %}
+                        {{ profile.patient_info.level | safe }}
+                    {% else %}
+                        Não informado
+                    {% endif %}
+                </div>
+                <p><strong>Resumo:</strong></p>
+                <div class="markdown-content">
+                    {% if profile.patient_info.description %}
+                        {% set desc_lines = profile.patient_info.description.split('<br>') %}
+                        {% for line in desc_lines[:3] %}
+                            {% if line.strip() %}
+                                {% if loop.index > 1 %}<br>{% endif %}{{ line.strip() | replace('<br>', '') }}
+                            {% endif %}
+                        {% endfor %}
+                        {% if desc_lines | length > 3 %}
+                            ...
+                        {% endif %}
+                    {% else %}
+                        Não informado
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <div class="card mt-3">
+            <div class="card-header">
+                <i class="bi bi-bar-chart"></i> Estatísticas
+            </div>
+            <div class="card-body">
+                <div class="d-flex justify-content-between mb-2">
+                    <span>Documentos:</span>
+                    <strong>{{ profile.documents_count }}</strong>
+                </div>
+                <div class="d-flex justify-content-between mb-2">
+                    <span>Sensibilidades:</span>
+                    <strong>{{ profile.sensitivities|length }}</strong>
+                </div>
+                <div class="d-flex justify-content-between mb-2">
+                    <span>Cadastro:</span>
+                    <strong>{{ profile.patient_info.created_at[:10] if profile.patient_info.created_at else 'Não informado' }}</strong>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-8">
+        {% if profile.sensitivities and profile.sensitivities|length > 0 %}
+        <div class="card mb-3">
+            <div class="card-header">
+                <i class="bi bi-exclamation-triangle"></i> Sensibilidades e Observações
+            </div>
+            <div class="card-body">
+                <ul class="list-group list-group-flush">
+                    {% for sensitivity in profile.sensitivities %}
+                    <li class="list-group-item">
+                        <i class="bi bi-dot text-warning"></i>
+                        {% if sensitivity.sensitivity_type and sensitivity.sensitivity_type != 'Não se aplica' %}
+                            <strong>Tipo:</strong> {{ sensitivity.sensitivity_type }} |
+                        {% endif %}
+                        {% if sensitivity.sensitivity_level and sensitivity.sensitivity_level != 'Não se aplica' %}
+                            <strong>Nível:</strong> {{ sensitivity.sensitivity_level }} |
+                        {% endif %}
+                        {% if sensitivity.description and sensitivity.description != 'Não se aplica' and sensitivity.description != 'Sensibilidade de teste' %}
+                            <strong>Descrição:</strong> {{ sensitivity.description }}
+                        {% else %}
+                            {% if sensitivity.description == 'Sensibilidade de teste' %}
+                                <strong>Descrição:</strong> Não se aplica
+                            {% else %}
+                                <strong>Descrição:</strong> Não se aplica
+                            {% endif %}
+                        {% endif %}
+                    </li>
+                    {% endfor %}
+                </ul>
+            </div>
+        </div>
+        {% else %}
+        <div class="card mb-3">
+            <div class="card-header">
+                <i class="bi bi-exclamation-triangle"></i> Sensibilidades e Observações
+            </div>
+            <div class="card-body">
+                <p class="text-muted">Não se aplica</p>
+            </div>
+        </div>
+        {% endif %}
+
+        <div class="card">
+            <div class="card-header">
+                <i class="bi bi-journal-text"></i> Descrição Completa
+            </div>
+            <div class="card-body">
+                <div class="markdown-content">
+                    {% if profile.patient_info.description %}
+                        {{ profile.patient_info.description | safe }}
+                    {% else %}
+                        <p class="text-muted">Nenhuma descrição detalhada disponível.</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <div class="card mt-3">
+            <div class="card-header">
+                <i class="bi bi-tools"></i> Ações
+            </div>
+            <div class="card-body">
+                <a href="{{ url_for('patient_edit', patient_id=patient_id) }}" class="btn btn-warning me-2">
+                    <i class="bi bi-pencil"></i> Editar Paciente
+                </a>
+                <a href="{{ url_for('query') }}?patient_id={{ patient_id }}" class="btn btn-primary me-2">
+                    <i class="bi bi-search"></i> Consultar sobre este paciente
+                </a>
+                <a href="{{ url_for('assessment') }}?patient_id={{ patient_id }}" class="btn btn-success me-2">
+                    <i class="bi bi-clipboard-check"></i> Nova Avaliação
+                </a>
+                <a href="{{ url_for('upload') }}?patient_id={{ patient_id }}" class="btn btn-info">
+                    <i class="bi bi-cloud-upload"></i> Upload de Documentos
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+{% else %}
+<div class="alert alert-warning">
+    <i class="bi bi-exclamation-triangle"></i>
+    Não foi possível carregar o perfil do paciente.
+</div>
+{% endif %}
+{% endblock %}

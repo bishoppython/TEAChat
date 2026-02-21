@@ -1,0 +1,58 @@
+# Environment
+.env
+./env/
+venv/
+.venv/
+env/*
+
+# Build artifacts
+.dist/
+.build/
+*.egg-info/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Logs and temp files
+*.log
+*.tmp
+*.bak
+
+# Python cache
+__pycache__/*
+core/__pycache__/*
+utils/__pycache__/ *
+database/__pycache__/
+analysis/__pycache__/*
+frontFlask/__pycache__/*
+core/__pycache__/local_response_generator.cpython-311.pyc
+
+# Test files (development only)
+/testes/
+test_*.py
+demo_*.py
+
+# Development/fix scripts (not needed in production)
+check_*.py
+fix_*.py
+ensure_tables.py
+setup_db.py
+investigate_issue.py
+direct_schema_update.py
+update_*.py
+verify_schema.py
+recreate_documents_table.py
+create_patient.py
+
+# Old/experimental files
+frontend.py
+projeto_semi_funcional.zip
+/pgvector
+package-lock.json

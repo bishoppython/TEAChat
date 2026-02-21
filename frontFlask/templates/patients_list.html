@@ -1,0 +1,107 @@
+{% extends "base.html" %}
+
+{% block title %}Pacientes - Sistema de IA para Psicopedagogia Clínica{% endblock %}
+
+{% block extra_css %}
+<style>
+    .patient-card {
+        transition: all 0.3s;
+        border-left: 4px solid var(--primary-color);
+    }
+    
+    .patient-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 8px rgba(0,0,0,0.12);
+    }
+    
+    .patient-badge {
+        font-size: 0.75rem;
+        padding: 0.25rem 0.5rem;
+    }
+    
+    .empty-state {
+        text-align: center;
+        padding: 3rem 1rem;
+        color: var(--secondary-color);
+    }
+    
+    .empty-state i {
+        font-size: 3rem;
+        margin-bottom: 1rem;
+        opacity: 0.3;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<h2><i class="bi bi-people me-2"></i>Lista de Pacientes</h2>
+
+{% if patients %}
+    <div class="row">
+        {% for patient in patients %}
+        <div class="col-md-6 col-lg-4 mb-4">
+            <div class="card patient-card h-100">
+                <div class="card-body">
+                    <h5 class="card-title">
+                        {{ patient.first_name }} {{ patient.last_name }}
+                    </h5>
+                    <p class="card-text">
+                        <small class="text-muted">
+                            <i class="bi bi-calendar"></i> 
+                            {% if patient.birth_date %}Nascido em: {{ patient.birth_date }}{% endif %}
+                            {% if patient.age %}({{ patient.age }} anos){% endif %}
+                        </small>
+                    </p>
+                    <p class="card-text">
+                        <i class="bi bi-clipboard-check"></i> 
+                        <small>{{ patient.diagnosis[:50] }}{% if patient.diagnosis|length > 50 %}...{% endif %}</small>
+                    </p>
+                    
+                    {% if patient.neurotype %}
+                    <span class="badge bg-primary patient-badge me-1">{{ patient.neurotype }}</span>
+                    {% endif %}
+                    
+                    {% if patient.level %}
+                    <span class="badge bg-info patient-badge me-1">{{ patient.level }}</span>
+                    {% endif %}
+                </div>
+                <div class="card-footer bg-transparent border-top">
+                    <small class="text-muted">
+                        <i class="bi bi-clock"></i> 
+                        Cadastrado em: {{ patient.created_at[:10] if patient.created_at else 'Não informado' }}
+                    </small>
+                    <div class="text-end">
+                        <a href="{{ url_for('patient_profile', patient_id=patient.id) }}" class="btn btn-sm btn-outline-primary me-1">
+                            <i class="bi bi-eye"></i> Ver Perfil
+                        </a>
+                        <div class="btn-group" role="group">
+                            <button type="button" class="btn btn-sm btn-outline-secondary dropdown-toggle" data-bs-toggle="dropdown">
+                                <i class="bi bi-three-dots"></i> Ações
+                            </button>
+                            <ul class="dropdown-menu dropdown-menu-end">
+                                <li><a class="dropdown-item" href="{{ url_for('patient_edit', patient_id=patient.id) }}"><i class="bi bi-pencil me-2"></i>Editar</a></li>
+                                <li><hr class="dropdown-divider"></li>
+                                <li><a class="dropdown-item" href="{{ url_for('query') }}?patient_id={{ patient.id }}"><i class="bi bi-search me-2"></i>Consultar</a></li>
+                                <li><a class="dropdown-item" href="{{ url_for('assessment') }}?patient_id={{ patient.id }}"><i class="bi bi-clipboard-check me-2"></i>Avaliação</a></li>
+                                <li><a class="dropdown-item" href="{{ url_for('upload') }}?patient_id={{ patient.id }}"><i class="bi bi-cloud-upload me-2"></i>Upload</a></li>
+                                <li><hr class="dropdown-divider"></li>
+                                <li><a class="dropdown-item text-danger" href="#"><i class="bi bi-trash me-2"></i>Excluir</a></li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+{% else %}
+    <div class="empty-state">
+        <i class="bi bi-people"></i>
+        <h3>Nenhum paciente cadastrado</h3>
+        <p class="text-muted">Você ainda não cadastrou nenhum paciente.</p>
+        <a href="{{ url_for('patient_register') }}" class="btn btn-primary">
+            <i class="bi bi-person-plus"></i> Cadastrar Primeiro Paciente
+        </a>
+    </div>
+{% endif %}
+{% endblock %}

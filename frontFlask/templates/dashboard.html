@@ -1,0 +1,194 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard - TEAChat{% endblock %}
+
+{% block extra_css %}
+<style>
+    .patient-card {
+        transition: all 0.3s;
+        border-left: 3px solid var(--primary-color);
+    }
+
+    .patient-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 8px rgba(0,0,0,0.12);
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2><i class="bi bi-house-door"></i> Dashboard</h2>
+    <span class="text-muted">Bem-vindo, {{ username }}!</span>
+</div>
+
+<!-- Estatísticas -->
+<div class="row">
+    <div class="col-md-3 mb-3">
+        <div class="card stat-card">
+            <div class="card-body">
+                <div class="stat-value">{{ stats.total_uploads or 0 }}</div>
+                <div class="stat-label">Envios de Documentos</div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-3 mb-3">
+        <div class="card stat-card">
+            <div class="card-body">
+                <div class="stat-value">{{ stats.total_patients or 0 }}</div>
+                <div class="stat-label">Pacientes</div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-3 mb-3">
+        <div class="card stat-card">
+            <div class="card-body">
+                <div class="stat-value">{{ stats.total_assessments or 0 }}</div>
+                <div class="stat-label">Avaliações</div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-3 mb-3">
+        <div class="card stat-card">
+            <div class="card-body">
+                <div class="stat-value">{{ stats.total_queries or 0 }}</div>
+                <div class="stat-label">Consultas</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Ações rápidas -->
+<div class="row mt-4">
+    <div class="col-md-12">
+        <h4 class="mb-3">Ações Rápidas</h4>
+    </div>
+    
+    <div class="col-md-4 mb-3">
+        <div class="card h-100">
+            <div class="card-body text-center">
+                <i class="bi bi-search display-4 text-primary mb-3"></i>
+                <h5 class="card-title">Consultar Sistema</h5>
+                <p class="card-text">Faça perguntas sobre seus pacientes e obtenha respostas baseadas em IA</p>
+                <a href="{{ url_for('query') }}" class="btn btn-primary">
+                    <i class="bi bi-arrow-right"></i> Ir para Consultas
+                </a>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-4 mb-3">
+        <div class="card h-100">
+            <div class="card-body text-center">
+                <i class="bi bi-file-text display-4 text-success mb-3"></i>
+                <h5 class="card-title">Adicionar Documento</h5>
+                <p class="card-text">Adicione notas clínicas, relatórios e outros documentos ao sistema</p>
+                <a href="{{ url_for('documents') }}" class="btn btn-success">
+                    <i class="bi bi-arrow-right"></i> Adicionar Documento
+                </a>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-4 mb-3">
+        <div class="card h-100">
+            <div class="card-body text-center">
+                <i class="bi bi-cloud-upload display-4 text-info mb-3"></i>
+                <h5 class="card-title">Upload de Arquivo</h5>
+                <p class="card-text">Faça upload de PDFs, DOCs e outros arquivos para processamento</p>
+                <a href="{{ url_for('upload') }}" class="btn btn-info text-white">
+                    <i class="bi bi-arrow-right"></i> Upload de Arquivo
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Seção de Pacientes -->
+<div class="row mt-4">
+    <div class="col-md-12">
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="mb-0"><i class="bi bi-people"></i> Pacientes Cadastrados</h5>
+                <a href="{{ url_for('patients_list') }}" class="btn btn-sm btn-outline-primary">
+                    <i class="bi bi-list"></i> Ver Todos
+                </a>
+            </div>
+            <div class="card-body">
+                {% if stats.patients and stats.patients|length > 0 %}
+                <div class="row">
+                    {% for patient in stats.patients[:6] %}
+                    <div class="col-md-4 mb-3">
+                        <div class="card h-100 patient-card">
+                            <div class="card-body">
+                                <h6 class="card-title">
+                                    <i class="bi bi-person-fill"></i>
+                                    {{ patient.name or patient.first_name + ' ' + patient.last_name if patient.first_name and patient.last_name else 'Paciente ' + patient.id|string }}
+                                </h6>
+                                <p class="card-text small text-muted mb-1">
+                                    <i class="bi bi-calendar"></i> {{ patient.age or 'Idade N/A' }} anos
+                                </p>
+                                <p class="card-text small text-muted mb-2">
+                                    <i class="bi bi-clipboard-check"></i>
+                                    {{ patient.diagnosis[:30] }}{% if patient.diagnosis|length > 30 %}...{% endif %}
+                                </p>
+                                <a href="{{ url_for('patient_profile', patient_id=patient.id) }}" class="btn btn-sm btn-outline-primary">
+                                    <i class="bi bi-eye"></i> Ver Perfil
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <div class="text-center py-4">
+                    <i class="bi bi-people display-4 text-muted"></i>
+                    <p class="text-muted mt-2">Você ainda não cadastrou nenhum paciente.</p>
+                    <a href="{{ url_for('patient_register') }}" class="btn btn-primary">
+                        <i class="bi bi-person-plus"></i> Cadastrar Primeiro Paciente
+                    </a>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Informações do sistema -->
+<div class="row mt-4">
+    <div class="col-md-12">
+        <div class="card">
+            <div class="card-header">
+                <i class="bi bi-info-circle"></i> Sobre o Sistema
+            </div>
+            <div class="card-body">
+                <p class="mb-2">
+                    <strong>TEAChat</strong>
+                </p>
+                <p class="text-muted mb-0">
+                    O TEAChat é um sistema que utiliza Inteligência Artificial (AI) avançada para auxiliar profissionais multidisciplinares
+                    no gerenciamento de informações clínicas, análise de casos e tomada de decisões baseadas em evidências.
+                </p>
+                <hr>
+                <div class="row text-center">
+                    <div class="col-md-4">
+                        <i class="bi bi-shield-check text-success display-6"></i>
+                        <p class="mt-2 mb-0"><small>Dados Seguros</small></p>
+                    </div>
+                    <div class="col-md-4">
+                        <i class="bi bi-lightning-charge text-warning display-6"></i>
+                        <p class="mt-2 mb-0"><small>Respostas Rápidas</small></p>
+                    </div>
+                    <div class="col-md-4">
+                        <i class="bi bi-graph-up text-primary display-6"></i>
+                        <p class="mt-2 mb-0"><small>Análise Inteligente</small></p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
