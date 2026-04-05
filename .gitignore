@@ -1,57 +1,153 @@
-# Python
+# =============================================================================
+# .gitignore — TEAChat / SYMYAH
+# Regras abrangentes para evitar violações de segurança no GitHub
+# =============================================================================
+
+# -----------------------------------------------------------------------
+# SEGREDOS E CREDENCIAIS — GitHub bloqueia push com estes arquivos
+# -----------------------------------------------------------------------
+
+# Arquivos de secrets genéricos
+.secrets
+*.secrets
+**/.secrets
+secrets.yml
+secrets.yaml
+secrets.json
+credentials
+credentials.json
+credentials.yml
+
+# AWS
+AWS/.secrets
+.aws/credentials
+.aws/config
+aws-credentials
+*_aws_key*
+*aws_access*
+*aws_secret*
+
+# GCP
+gcp-sa-key.json
+*-service-account*.json
+*-sa-key.json
+service_account*.json
+keyfile.json
+google-credentials.json
+
+# Chaves privadas e certificados
+*.pem
+*.key
+*.p12
+*.pfx
+*.cer
+*.crt
+public-key-teachat
+id_rsa
+id_rsa.pub
+id_ed25519
+id_ed25519.pub
+
+# Tokens e API Keys em arquivos
+*token*.json
+*token*.txt
+api_key.txt
+api_keys.txt
+
+# -----------------------------------------------------------------------
+# VARIÁVEIS DE AMBIENTE — nunca commitar arquivos .env reais
+# -----------------------------------------------------------------------
+.env
+.env.*
+!.env.example
+!.env.*.example
+!.env.gcp.example
+
+# -----------------------------------------------------------------------
+# PYTHON
+# -----------------------------------------------------------------------
 venv/
 env/
+.venv/
 __pycache__/
 **/__pycache__/
 *.pyc
 *.pyo
+*.pyd
+*.egg-info/
+dist/
+build/
+.eggs/
+*.egg
+.python-version
 
-# Ambientes virtuais dentro de subpastas (ex: testes/env_tst/)
+# Ambientes virtuais em subpastas
 testes/env_tst/
-*.pyc
-*.pyo
+**/env_tst/
 
-# IA
-models/
-*.pt
-*.bin
-*.ckpt
-
-# Banco
-*.db
-
-# Node
+# -----------------------------------------------------------------------
+# NODE / JAVASCRIPT
+# -----------------------------------------------------------------------
 node_modules/
 package-lock.json
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
 
-# Ambiente — NUNCA commitar arquivos .env reais
-.env
-.env.aws
-.env.local
-.env.gcp
-# Manter apenas os .example (são templates seguros)
+# -----------------------------------------------------------------------
+# MODELOS DE IA (arquivos binários pesados)
+# -----------------------------------------------------------------------
+models/
+*.pt
+*.pth
+*.bin
+*.ckpt
+*.safetensors
+*.gguf
+*.onnx
 
-# Segredos e chaves — NUNCA commitar
-gcp-sa-key.json
-*.json.key
-public-key-teachat
+# -----------------------------------------------------------------------
+# BANCO DE DADOS
+# -----------------------------------------------------------------------
+*.db
+*.sqlite
+*.sqlite3
 
-# Instaladores e SDKs pesados
+# -----------------------------------------------------------------------
+# INSTALADORES E SDKs PESADOS
+# -----------------------------------------------------------------------
 awscliv2.zip
 awscliv2.sig
 google-cloud-sdk/
 pgvector/
 
-# Cache
+# -----------------------------------------------------------------------
+# CACHE E TEMPORÁRIOS
+# -----------------------------------------------------------------------
 .cache/
-
-# Deploy
-aws-deploy/.env.aws
-aws-deploy/*.bak
+tmp/
+temp/
+*.log
 *.sarif
-
-# IDE
-.vscode/
-.idea/
+*.tmp
+*.bak
 *.swp
 *.swo
+
+# -----------------------------------------------------------------------
+# IDE E EDITORES
+# -----------------------------------------------------------------------
+.vscode/
+.idea/
+*.code-workspace
+.DS_Store
+Thumbs.db
+
+# -----------------------------------------------------------------------
+# DEPLOY (arquivos com segredos específicos de plataforma)
+# -----------------------------------------------------------------------
+aws-deploy/.env.aws
+aws-deploy/*.bak
+Deploy-light/.env
+Deploy/.env
+DEPLOY_MAXIMO/.env
