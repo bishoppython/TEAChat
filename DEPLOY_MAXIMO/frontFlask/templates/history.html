@@ -1,0 +1,148 @@
+{% extends "base.html" %}
+
+{% block title %}Histórico - TEAChat{% endblock %}
+
+{% block extra_css %}
+<style>
+    .history-card {
+        transition: all 0.3s;
+        border-left: 4px solid var(--primary-color);
+    }
+    
+    .history-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 8px rgba(0,0,0,0.12);
+    }
+    
+    .history-stat-card {
+        border-left: 4px solid var(--info-color);
+    }
+    
+    .stat-icon {
+        font-size: 2.5rem;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2><i class="bi bi-clock-history"></i> Histórico</h2>
+    <a href="{{ url_for('dashboard') }}" class="btn btn-outline-secondary">
+        <i class="bi bi-arrow-left"></i> Voltar
+    </a>
+</div>
+
+<div class="row mb-4">
+    <div class="col-md-3 mb-3">
+        <div class="card history-stat-card bg-light">
+            <div class="card-body text-center">
+                <i class="bi bi-search stat-icon text-warning"></i>
+                <h3 class="mt-2">{{ stats.queries_count or 0 }}</h3>
+                <p class="text-muted mb-0">Consultas</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3 mb-3">
+        <div class="card history-stat-card bg-light">
+            <div class="card-body text-center">
+                <i class="bi bi-clipboard-check stat-icon text-info"></i>
+                <h3 class="mt-2">{{ stats.assessments_count or 0 }}</h3>
+                <p class="text-muted mb-0">Avaliações</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3 mb-3">
+        <div class="card history-stat-card bg-light">
+            <div class="card-body text-center">
+                <i class="bi bi-cloud-upload stat-icon text-success"></i>
+                <h3 class="mt-2">{{ stats.uploads_count or 0 }}</h3>
+                <p class="text-muted mb-0">Uploads</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3 mb-3">
+        <div class="card history-stat-card bg-light">
+            <div class="card-body text-center">
+                <i class="bi bi-file-text stat-icon text-primary"></i>
+                <h3 class="mt-2">{{ stats.documents_count or 0 }}</h3>
+                <p class="text-muted mb-0">Documentos</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-3 mb-4">
+        <div class="card history-card h-100">
+            <div class="card-body text-center">
+                <i class="bi bi-search" style="font-size: 3rem; color: var(--warning-color);"></i>
+                <h5 class="card-title mt-3">Consultas</h5>
+                <p class="card-text text-muted">Histórico de interações por perguntas e respostas</p>
+                <a href="{{ url_for('history_queries') }}" class="btn btn-warning">
+                    <i class="bi bi-eye"></i> Ver Consultas
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-3 mb-4">
+        <div class="card history-card h-100">
+            <div class="card-body text-center">
+                <i class="bi bi-clipboard-check" style="font-size: 3rem; color: var(--info-color);"></i>
+                <h5 class="card-title mt-3">Avaliações Clínicas</h5>
+                <p class="card-text text-muted">Histórico de todas as avaliações clínicas realizadas</p>
+                <a href="{{ url_for('history_assessments') }}" class="btn btn-info">
+                    <i class="bi bi-eye"></i> Ver Avaliações
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-3 mb-4">
+        <div class="card history-card h-100">
+            <div class="card-body text-center">
+                <i class="bi bi-cloud-upload" style="font-size: 3rem; color: var(--success-color);"></i>
+                <h5 class="card-title mt-3">Uploads de Arquivos</h5>
+                <p class="card-text text-muted">Histórico de todos os arquivos enviados</p>
+                <a href="{{ url_for('history_uploads') }}" class="btn btn-success">
+                    <i class="bi bi-eye"></i> Ver Uploads
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-3 mb-4">
+        <div class="card history-card h-100">
+            <div class="card-body text-center">
+                <i class="bi bi-file-text" style="font-size: 3rem; color: var(--primary-color);"></i>
+                <h5 class="card-title mt-3">Documentos Adicionados</h5>
+                <p class="card-text text-muted">Histórico de documentos adicionados manualmente</p>
+                <a href="{{ url_for('history_documents') }}" class="btn btn-primary">
+                    <i class="bi bi-eye"></i> Ver Documentos
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="card mt-4">
+    <div class="card-header">
+        <i class="bi bi-info-circle"></i> Sobre o Histórico
+    </div>
+    <div class="card-body">
+        <p class="card-text">
+            Esta seção fornece acesso ao histórico completo de todas as interações clínicas registradas no sistema, incluindo:
+        </p>
+        <ul>
+            <li><strong>Consultas:</strong> Interações por perguntas e respostas com o sistema de IA</li>
+            <li><strong>Avaliações Clínicas:</strong> Avaliações clínicas realizadas com base em documentos e conhecimento clínico</li>
+            <li><strong>Uploads de Arquivos:</strong> Todos os arquivos (PDF, DOCX, etc.) que foram enviados ao sistema</li>
+            <li><strong>Documentos Adicionados:</strong> Todos os documentos de texto adicionados manualmente</li>
+        </ul>
+        <p class="card-text">
+            Use os links acima para navegar entre as diferentes categorias de histórico. Cada seção permite filtrar por paciente, data e outros critérios relevantes.
+        </p>
+    </div>
+</div>
+
+{% endblock %}

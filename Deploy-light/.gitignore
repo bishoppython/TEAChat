@@ -1,0 +1,7 @@
+# .gitignore para Deploy-light
+.env
+*.log
+backups/
+__pycache__/
+*.pyc
+.DS_Store

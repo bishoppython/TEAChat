@@ -124,22 +124,40 @@ def anonymize_text_only(text, anonymization_level="total"):
             tokens[i - 1] if i > 0 else None,
             tokens[i + 1] if i < len(tokens) - 1 else None
         ):
-            seq = [token]
+            full_name_segment = [token]
             j = i + 1
+ 
+            while j < len(tokens):
+                if is_likely_proper_name(
+                    tokens[j],
+                    tokens[j - 1] if j > 0 else None,
+                    tokens[j + 1] if j < len(tokens) - 1 else None
+                ):
+                    full_name_segment.append(tokens[j])
+                    j += 1
+                elif tokens[j].lower() in ("de", "da", "do", "das", "dos", "e") and j + 1 < len(tokens) and is_likely_proper_name(
+                    tokens[j + 1],
+                    tokens[j],
+                    tokens[j + 2] if j + 2 < len(tokens) else None
+                ):
+                    full_name_segment.append(tokens[j])
+                    full_name_segment.append(tokens[j + 1])
+                    j += 2
+                else:
+                    break
 
-            while j < len(tokens) and is_likely_proper_name(
-                tokens[j],
-                tokens[j - 1] if j > 0 else None,
-                tokens[j + 1] if j < len(tokens) - 1 else None
-            ):
-                seq.append(tokens[j])
-                j += 1
-
-            if len(seq) == 1:
-                anon_tokens.append("<NAME>")
-            else:
-                anon_tokens.append("<NAME>")
-                anon_tokens.append("<LASTNAME>")
+            proper_count = 0
+            for t in full_name_segment:
+                if t.lower() in ("de", "da", "do", "das", "dos", "e"):
+                    anon_tokens.append(t)
+                else:
+                    proper_count += 1
+                    if proper_count == 1:
+                        anon_tokens.append("<NAME>")
+                    elif proper_count == 2:
+                        anon_tokens.append("<LASTNAME>")
+                    else:
+                        anon_tokens.append(t)
 
             i = j
         else:

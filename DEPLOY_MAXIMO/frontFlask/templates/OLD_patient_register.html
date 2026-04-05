@@ -1,0 +1,127 @@
+{% extends "base.html" %}
+
+{% block title %}Cadastrar Paciente - Sistema de IA para Psicopedagogia Clínica{% endblock %}
+
+{% block extra_css %}
+<style>
+    .form-container {
+        max-width: 600px;
+        margin: 0 auto;
+    }
+    
+    .form-section {
+        background: white;
+        padding: 2rem;
+        border-radius: 10px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.08);
+        margin-bottom: 1.5rem;
+    }
+    
+    .form-section h3 {
+        color: var(--primary-color);
+        margin-bottom: 1.5rem;
+        padding-bottom: 0.5rem;
+        border-bottom: 2px solid var(--light-bg);
+    }
+    
+    .required-field::after {
+        content: " *";
+        color: var(--danger-color);
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="form-container">
+    <h2><i class="bi bi-person-plus-fill me-2"></i>Cadastrar Novo Paciente</h2>
+    
+    <form method="POST" action="{{ url_for('patient_register') }}" class="needs-validation" novalidate>
+        <div class="form-section">
+            <h3>Dados Pessoais</h3>
+            
+            <div class="row">
+                <div class="col-md-6 mb-3">
+                    <label for="first_name" class="form-label required-field">Primeiro Nome</label>
+                    <input type="text" class="form-control" id="first_name" name="first_name" required>
+                    <div class="invalid-feedback">Por favor, informe o primeiro nome.</div>
+                </div>
+                
+                <div class="col-md-6 mb-3">
+                    <label for="last_name" class="form-label required-field">Sobrenome</label>
+                    <input type="text" class="form-control" id="last_name" name="last_name" required>
+                    <div class="invalid-feedback">Por favor, informe o sobrenome.</div>
+                </div>
+            </div>
+            
+            <div class="row">
+                <div class="col-md-6 mb-3">
+                    <label for="birth_date" class="form-label required-field">Data de Nascimento</label>
+                    <input type="date" class="form-control" id="birth_date" name="birth_date" required>
+                    <div class="invalid-feedback">Por favor, informe a data de nascimento.</div>
+                </div>
+                
+                <div class="col-md-6 mb-3">
+                    <label for="age" class="form-label required-field">Idade</label>
+                    <input type="number" class="form-control" id="age" name="age" required min="0" max="150">
+                    <div class="invalid-feedback">Por favor, informe uma idade válida.</div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="form-section">
+            <h3>Diagnóstico e Características</h3>
+            
+            <div class="mb-3">
+                <label for="diagnosis" class="form-label required-field">Diagnóstico</label>
+                <textarea class="form-control" id="diagnosis" name="diagnosis" rows="3" required></textarea>
+                <div class="invalid-feedback">Por favor, informe o diagnóstico.</div>
+            </div>
+            
+            <div class="row">
+                <div class="col-md-6 mb-3">
+                    <label for="neurotype" class="form-label">Neurotipo</label>
+                    <input type="text" class="form-control" id="neurotype" name="neurotype" placeholder="Ex: TEA, TDA/H, etc.">
+                </div>
+                
+                <div class="col-md-6 mb-3">
+                    <label for="level" class="form-label">Nível/Escolaridade</label>
+                    <input type="text" class="form-control" id="level" name="level" placeholder="Ex: Fundamental I, 3º ano">
+                </div>
+            </div>
+            
+            <div class="mb-3">
+                <label for="description" class="form-label">Descrição Adicional</label>
+                <textarea class="form-control" id="description" name="description" rows="4" placeholder="Observações adicionais sobre o paciente..."></textarea>
+            </div>
+        </div>
+        
+        <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+            <a href="{{ url_for('dashboard') }}" class="btn btn-secondary me-md-2">
+                <i class="bi bi-arrow-left"></i> Voltar
+            </a>
+            <button type="submit" class="btn btn-primary">
+                <i class="bi bi-save"></i> Cadastrar Paciente
+            </button>
+        </div>
+    </form>
+</div>
+
+<script>
+// Habilitar validação do Bootstrap
+(function () {
+    'use strict'
+    var forms = document.querySelectorAll('.needs-validation')
+    
+    Array.prototype.slice.call(forms)
+        .forEach(function (form) {
+            form.addEventListener('submit', function (event) {
+                if (!form.checkValidity()) {
+                    event.preventDefault()
+                    event.stopPropagation()
+                }
+                form.classList.add('was-validated')
+            }, false)
+        })
+})()
+</script>
+{% endblock %}

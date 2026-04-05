@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>404 - Página Não Encontrada</title>
+    
+    <!-- Bootstrap CSS -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.2/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Bootstrap Icons -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-icons/1.11.1/font/bootstrap-icons.min.css" rel="stylesheet">
+    
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .error-container {
+            text-align: center;
+            color: white;
+        }
+        
+        .error-code {
+            font-size: 10rem;
+            font-weight: 700;
+            text-shadow: 5px 5px 10px rgba(0,0,0,0.3);
+            animation: pulse 2s infinite;
+        }
+        
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.7; }
+        }
+        
+        .error-icon {
+            font-size: 8rem;
+            animation: float 3s ease-in-out infinite;
+        }
+        
+        @keyframes float {
+            0%, 100% { transform: translateY(0px); }
+            50% { transform: translateY(-20px); }
+        }
+        
+        .card {
+            background: rgba(255, 255, 255, 0.95);
+            border: none;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            padding: 3rem;
+            max-width: 600px;
+            margin: 0 auto;
+        }
+        
+        .btn-custom {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border: none;
+            color: white;
+            padding: 12px 30px;
+            border-radius: 25px;
+            font-weight: 600;
+            transition: all 0.3s;
+        }
+        
+        .btn-custom:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(102, 126, 234, 0.4);
+            color: white;
+        }
+        
+        .suggestions {
+            text-align: left;
+            margin-top: 2rem;
+        }
+        
+        .suggestions li {
+            margin-bottom: 0.5rem;
+            color: #666;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="error-container">
+            <div class="card">
+                <i class="bi bi-exclamation-triangle error-icon text-warning"></i>
+                <div class="error-code">404</div>
+                <h2 class="text-dark mb-3">Página Não Encontrada</h2>
+                <p class="text-muted mb-4">
+                    Ops! A página que você está procurando não existe ou foi movida.
+                </p>
+                
+                <div class="d-flex gap-2 justify-content-center mb-4">
+                    {% if session.username %}
+                    <a href="{{ url_for('dashboard') }}" class="btn btn-custom">
+                        <i class="bi bi-house-door"></i> Ir para o Dashboard
+                    </a>
+                    {% else %}
+                    <a href="{{ url_for('login') }}" class="btn btn-custom">
+                        <i class="bi bi-box-arrow-in-right"></i> Fazer Login
+                    </a>
+                    {% endif %}
+                    <button onclick="history.back()" class="btn btn-outline-secondary">
+                        <i class="bi bi-arrow-left"></i> Voltar
+                    </button>
+                </div>
+                
+                <div class="suggestions">
+                    <h6 class="text-dark">Você pode tentar:</h6>
+                    <ul>
+                        <li>Verificar se o endereço está correto</li>
+                        <li>Voltar para a página anterior</li>
+                        {% if session.username %}
+                        <li>Acessar o <a href="{{ url_for('dashboard') }}">Dashboard</a></li>
+                        <li>Fazer uma <a href="{{ url_for('query') }}">consulta</a> no sistema</li>
+                        {% else %}
+                        <li>Fazer <a href="{{ url_for('login') }}">login</a> no sistema</li>
+                        {% endif %}
+                    </ul>
+                </div>
+                
+                <hr>
+                
+                <p class="text-muted small mb-0">
+                    <i class="bi bi-info-circle"></i> 
+                    Se você acredita que isso é um erro, entre em contato com o suporte.
+                </p>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Bootstrap JS -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.2/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

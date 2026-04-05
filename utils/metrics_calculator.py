@@ -39,15 +39,20 @@ class MetricsCalculator:
         self.qa_pipeline = None
         
         # Inicializar recursos do NLTK se disponíveis
+        import os
+        nltk_data_dir = os.environ.get('NLTK_DATA', '/tmp/nltk_data')
+        os.makedirs(nltk_data_dir, exist_ok=True)
+        nltk.data.path.append(nltk_data_dir)
+        
         try:
             nltk.data.find('tokenizers/punkt')
         except LookupError:
-            nltk.download('punkt')
-        
+            nltk.download('punkt', download_dir=nltk_data_dir)
+
         try:
             nltk.data.find('tokenizers/punkt_tab')
         except LookupError:
-            nltk.download('punkt_tab')
+            nltk.download('punkt_tab', download_dir=nltk_data_dir)
     
     def calculate_latency_metrics(self, start_time: float, end_time: float) -> Dict[str, float]:
         """

@@ -1,0 +1,136 @@
+# =============================================================================
+# GitHub Actions — Deploy Automático para Google Cloud Run
+# TEAChat / SYMYAH
+#
+# TRIGGER: Push no branch 'main'
+#
+# PRÉ-REQUISITOS (secrets no GitHub):
+#   - GCP_PROJECT_ID    : ID do projeto GCP
+#   - GCP_SA_KEY        : JSON da Service Account com permissões de deploy
+#
+# Como criar a Service Account:
+#   gcloud iam service-accounts create github-actions-sa \
+#     --display-name="GitHub Actions Deploy SA"
+#
+#   gcloud projects add-iam-policy-binding $PROJECT_ID \
+#     --member="serviceAccount:github-actions-sa@$PROJECT_ID.iam.gserviceaccount.com" \
+#     --role="roles/run.admin"
+#
+#   gcloud projects add-iam-policy-binding $PROJECT_ID \
+#     --member="serviceAccount:github-actions-sa@$PROJECT_ID.iam.gserviceaccount.com" \
+#     --role="roles/storage.admin"
+#
+#   gcloud projects add-iam-policy-binding $PROJECT_ID \
+#     --member="serviceAccount:github-actions-sa@$PROJECT_ID.iam.gserviceaccount.com" \
+#     --role="roles/artifactregistry.admin"
+#
+#   gcloud iam service-accounts keys create key.json \
+#     --iam-account=github-actions-sa@$PROJECT_ID.iam.gserviceaccount.com
+#   # Cole o conteúdo de key.json no secret GCP_SA_KEY do GitHub
+# =============================================================================
+
+name: Deploy to Google Cloud Run
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:  # Permite execução manual pelo GitHub UI
+
+env:
+  GCP_REGION: us-central1
+  SERVICE_NAME: teachat-api
+  REPO_NAME: teachat
+  IMAGE_NAME: api
+
+jobs:
+  deploy:
+    name: Build & Deploy
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+
+    steps:
+      # -----------------------------------------------------------------------
+      # 1. Checkout do código
+      # -----------------------------------------------------------------------
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      # -----------------------------------------------------------------------
+      # 2. Autenticar no GCP com Service Account
+      # -----------------------------------------------------------------------
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v2
+        with:
+          credentials_json: ${{ secrets.GCP_SA_KEY }}
+
+      # -----------------------------------------------------------------------
+      # 3. Configurar gcloud CLI
+      # -----------------------------------------------------------------------
+      - name: Set up Cloud SDK
+        uses: google-github-actions/setup-gcloud@v2
+        with:
+          project_id: ${{ secrets.GCP_PROJECT_ID }}
+
+      # -----------------------------------------------------------------------
+      # 4. Configurar Docker para Artifact Registry
+      # -----------------------------------------------------------------------
+      - name: Configure Docker for Artifact Registry
+        run: |
+          gcloud auth configure-docker ${{ env.GCP_REGION }}-docker.pkg.dev --quiet
+
+      # -----------------------------------------------------------------------
+      # 5. Build da imagem Docker
+      # -----------------------------------------------------------------------
+      - name: Build Docker image
+        run: |
+          docker build \
+            -t ${{ env.GCP_REGION }}-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/${{ env.REPO_NAME }}/${{ env.IMAGE_NAME }}:${{ github.sha }} \
+            -t ${{ env.GCP_REGION }}-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/${{ env.REPO_NAME }}/${{ env.IMAGE_NAME }}:latest \
+            -f GCP/Dockerfile.cloudrun \
+            .
+
+      # -----------------------------------------------------------------------
+      # 6. Push da imagem para o Artifact Registry
+      # -----------------------------------------------------------------------
+      - name: Push Docker image
+        run: |
+          docker push --all-tags \
+            ${{ env.GCP_REGION }}-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/${{ env.REPO_NAME }}/${{ env.IMAGE_NAME }}
+
+      # -----------------------------------------------------------------------
+      # 7. Deploy no Cloud Run
+      # -----------------------------------------------------------------------
+      - name: Deploy to Cloud Run
+        run: |
+          gcloud run deploy ${{ env.SERVICE_NAME }} \
+            --image=${{ env.GCP_REGION }}-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/${{ env.REPO_NAME }}/${{ env.IMAGE_NAME }}:${{ github.sha }} \
+            --region=${{ env.GCP_REGION }} \
+            --platform=managed \
+            --allow-unauthenticated \
+            --port=8080 \
+            --memory=512Mi \
+            --cpu=1 \
+            --min-instances=0 \
+            --max-instances=2 \
+            --concurrency=80 \
+            --timeout=300 \
+            --set-secrets="OPENAI_API_KEY=OPENAI_API_KEY:latest,GOOGLE_API_KEY=GOOGLE_API_KEY:latest,DATABASE_URL=DATABASE_URL:latest,SECRET_KEY=SECRET_KEY:latest" \
+            --set-env-vars="HOST=0.0.0.0,PORT=8080,MAX_CONTEXT_TOKENS=2048,RAG_TOP_K=4,RAG_MIN_SIMILARITY=0.5,DEFAULT_MODEL=gpt-3.5-turbo,TRAINING_BATCH_SIZE=4,CHUNK_SIZE=500,CHUNK_OVERLAP=50" \
+            --project=${{ secrets.GCP_PROJECT_ID }}
+
+      # -----------------------------------------------------------------------
+      # 8. Exibir URL do serviço após deploy
+      # -----------------------------------------------------------------------
+      - name: Get Service URL
+        run: |
+          URL=$(gcloud run services describe ${{ env.SERVICE_NAME }} \
+            --region=${{ env.GCP_REGION }} \
+            --project=${{ secrets.GCP_PROJECT_ID }} \
+            --format='value(status.url)')
+          echo "✅ Deploy concluído!"
+          echo "🌐 URL: $URL"
+          echo "🏥 Health: $URL/health"
+          echo "📚 Docs: $URL/docs"
+          echo "SERVICE_URL=$URL" >> $GITHUB_ENV

@@ -1,0 +1,869 @@
+{% extends "base.html" %}
+
+{% block title %}Cadastrar Paciente - Sistema de IA{% endblock %}
+
+{% block extra_css %}
+<style>
+    .diagnosis-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+        gap: 10px;
+    }
+    
+    .diagnosis-option {
+        position: relative;
+    }
+    
+    .diagnosis-option input[type="checkbox"] {
+        position: absolute;
+        opacity: 0;
+    }
+    
+    .diagnosis-option label {
+        display: block;
+        padding: 12px 15px;
+        border: 2px solid #dee2e6;
+        border-radius: 8px;
+        cursor: pointer;
+        transition: all 0.3s;
+        text-align: center;
+        background: white;
+    }
+    
+    .diagnosis-option input[type="checkbox"]:checked + label {
+        background: linear-gradient(135deg, #4a6fa5 0%, #5a7db8 100%);
+        color: white;
+        border-color: #4a6fa5;
+        transform: translateY(-2px);
+        box-shadow: 0 4px 8px rgba(74, 111, 165, 0.3);
+    }
+    
+    .diagnosis-option label:hover {
+        border-color: #4a6fa5;
+        background-color: #f8f9fa;
+    }
+    
+    .diagnosis-option input[type="checkbox"]:checked + label:hover {
+        background: linear-gradient(135deg, #3a5f95 0%, #4a6da8 100%);
+    }
+    
+    .form-section {
+        background: white;
+        padding: 20px;
+        border-radius: 10px;
+        margin-bottom: 20px;
+        border-left: 4px solid #4a6fa5;
+    }
+    
+    .section-title {
+        color: #4a6fa5;
+        font-weight: 600;
+        margin-bottom: 15px;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+    }
+    
+    .required-field::after {
+        content: " *";
+        color: #dc3545;
+    }
+
+    #age-display {
+        font-size: 1.5rem;
+        font-weight: 700;
+        color: #4a6fa5;
+    }
+
+    .sensibility-item {
+        background-color: #f8f9fa;
+        border: 1px solid #dee2e6;
+    }
+
+    .sensibility-item:nth-child(odd) {
+        background-color: #fff;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2><i class="bi bi-person-plus-fill"></i> Cadastrar Novo Paciente</h2>
+    <a href="{{ url_for('dashboard') }}" class="btn btn-outline-secondary">
+        <i class="bi bi-arrow-left"></i> Voltar
+    </a>
+</div>
+
+<form method="POST" action="{{ url_for('patient_register') }}" id="patientForm">
+    <!-- Seção: Informações Pessoais -->
+    <div class="form-section">
+        <h5 class="section-title">
+            <i class="bi bi-person-circle"></i> Informações Pessoais
+        </h5>
+        
+        <div class="row">
+            <div class="col-md-6 mb-3">
+                <label for="first_name" class="form-label required-field">Nome</label>
+                <input type="text" class="form-control" id="first_name" name="first_name" 
+                       placeholder="Ex: João" required>
+            </div>
+            
+            <div class="col-md-6 mb-3">
+                <label for="last_name" class="form-label required-field">Sobrenome</label>
+                <input type="text" class="form-control" id="last_name" name="last_name" 
+                       placeholder="Ex: Silva Santos" required>
+            </div>
+        </div>
+        
+        <div class="row">
+            <div class="col-md-6 mb-3">
+                <label for="date_of_birth" class="form-label required-field">Data de Nascimento</label>
+                <input type="date" class="form-control" id="date_of_birth" name="date_of_birth"
+                       max="{{ today }}" required>
+                <small class="text-muted">Usado para calcular a idade automaticamente</small>
+            </div>
+            
+            <div class="col-md-6 mb-3">
+                <label for="age" class="form-label">Idade</label>
+                <div class="input-group">
+                    <span class="input-group-text"><i class="bi bi-calendar3"></i></span>
+                    <input type="number" class="form-control" id="age" name="age" 
+                           placeholder="Calculado automaticamente" readonly>
+                    <span class="input-group-text">anos</span>
+                </div>
+                <div id="age-display" class="mt-2"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Seção: Diagnóstico -->
+    <div class="form-section">
+        <h5 class="section-title">
+            <i class="bi bi-clipboard2-pulse"></i> Diagnóstico
+        </h5>
+        
+        <div class="mb-3">
+            <label class="form-label">Selecione o(s) diagnóstico(s):</label>
+            <small class="text-muted d-block mb-3">
+                <i class="bi bi-info-circle"></i> Você pode selecionar múltiplos diagnósticos se aplicável
+            </small>
+            
+            <div class="diagnosis-grid">
+                <div class="diagnosis-option">
+                    <input type="checkbox" id="diag_tea" name="diagnosis" value="TEA">
+                    <label for="diag_tea">
+                        <i class="bi bi-puzzle"></i><br>
+                        <strong>TEA</strong><br>
+                        <small>Transtorno do Espectro Autista</small>
+                    </label>
+                </div>
+                
+                <div class="diagnosis-option">
+                    <input type="checkbox" id="diag_tdah" name="diagnosis" value="TDAH">
+                    <label for="diag_tdah">
+                        <i class="bi bi-lightning"></i><br>
+                        <strong>TDAH</strong><br>
+                        <small>Déficit de Atenção e Hiperatividade</small>
+                    </label>
+                </div>
+                
+                <div class="diagnosis-option">
+                    <input type="checkbox" id="diag_tda" name="diagnosis" value="TDA">
+                    <label for="diag_tda">
+                        <i class="bi bi-eye-slash"></i><br>
+                        <strong>TDA</strong><br>
+                        <small>Déficit de Atenção</small>
+                    </label>
+                </div>
+                
+                <div class="diagnosis-option">
+                    <input type="checkbox" id="diag_dislexia" name="diagnosis" value="Dislexia">
+                    <label for="diag_dislexia">
+                        <i class="bi bi-book"></i><br>
+                        <strong>Dislexia</strong><br>
+                        <small>Dificuldade de Leitura</small>
+                    </label>
+                </div>
+                
+                <div class="diagnosis-option">
+                    <input type="checkbox" id="diag_disgrafia" name="diagnosis" value="Disgrafia">
+                    <label for="diag_disgrafia">
+                        <i class="bi bi-pencil"></i><br>
+                        <strong>Disgrafia</strong><br>
+                        <small>Dificuldade de Escrita</small>
+                    </label>
+                </div>
+                
+                <div class="diagnosis-option">
+                    <input type="checkbox" id="diag_discalculia" name="diagnosis" value="Discalculia">
+                    <label for="diag_discalculia">
+                        <i class="bi bi-calculator"></i><br>
+                        <strong>Discalculia</strong><br>
+                        <small>Dificuldade com Números</small>
+                    </label>
+                </div>
+                
+                <div class="diagnosis-option">
+                    <input type="checkbox" id="diag_tourette" name="diagnosis" value="Tourette">
+                    <label for="diag_tourette">
+                        <i class="bi bi-shuffle"></i><br>
+                        <strong>Tourette</strong><br>
+                        <small>Síndrome de Tourette</small>
+                    </label>
+                </div>
+                
+                <div class="diagnosis-option">
+                    <input type="checkbox" id="diag_toc" name="diagnosis" value="TOC">
+                    <label for="diag_toc">
+                        <i class="bi bi-arrow-repeat"></i><br>
+                        <strong>TOC</strong><br>
+                        <small>Transtorno Obsessivo-Compulsivo</small>
+                    </label>
+                </div>
+                
+                <div class="diagnosis-option">
+                    <input type="checkbox" id="diag_tod" name="diagnosis" value="TOD">
+                    <label for="diag_tod">
+                        <i class="bi bi-exclamation-triangle"></i><br>
+                        <strong>TOD</strong><br>
+                        <small>Transtorno Opositor Desafiador</small>
+                    </label>
+                </div>
+                
+                <div class="diagnosis-option">
+                    <input type="checkbox" id="diag_ahsd" name="diagnosis" value="AHSD">
+                    <label for="diag_ahsd">
+                        <i class="bi bi-star"></i><br>
+                        <strong>AHSD</strong><br>
+                        <small>Altas Habilidades / Superdotação</small>
+                    </label>
+                </div>
+                
+                <div class="diagnosis-option">
+                    <input type="checkbox" id="diag_down" name="diagnosis" value="Síndrome de Down">
+                    <label for="diag_down">
+                        <i class="bi bi-heart"></i><br>
+                        <strong>Down</strong><br>
+                        <small>Síndrome de Down</small>
+                    </label>
+                </div>
+                
+                <div class="diagnosis-option">
+                    <input type="checkbox" id="diag_rett" name="diagnosis" value="Síndrome de Rett">
+                    <label for="diag_rett">
+                        <i class="bi bi-person-x"></i><br>
+                        <strong>Rett</strong><br>
+                        <small>Síndrome de Rett</small>
+                    </label>
+                </div>
+                
+                <div class="diagnosis-option">
+                    <input type="checkbox" id="diag_outros" name="diagnosis" value="Outros">
+                    <label for="diag_outros">
+                        <i class="bi bi-three-dots"></i><br>
+                        <strong>Outros</strong><br>
+                        <small>Especificar</small>
+                    </label>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Campo condicional para "Outros" -->
+        <div class="mb-3" id="outros-container" style="display: none;">
+            <label for="diagnosis_other" class="form-label required-field">
+                Especifique o diagnóstico:
+            </label>
+            <input type="text" class="form-control" id="diagnosis_other" name="diagnosis_other" 
+                   placeholder="Digite o diagnóstico específico">
+        </div>
+        
+        <div class="alert alert-info border-start border-4 border-info">
+            <i class="bi bi-info-circle"></i>
+            <strong>Nota:</strong> Se nenhum diagnóstico for selecionado, o paciente será registrado como "Em avaliação"
+        </div>
+    </div>
+
+    <!-- Seção: Características Clínicas -->
+    <div class="form-section">
+        <h5 class="section-title">
+            <i class="bi bi-graph-up"></i> Características Clínicas
+        </h5>
+        
+        <div class="row">
+            <div class="col-md-6 mb-3">
+                <label for="neurotype" class="form-label">Tipo de Neurotipicidade</label>
+                <select class="form-select" id="neurotype" name="neurotype">
+                    <option value="">Selecione...</option>
+                    <option value="Neurotípico">Neurotípico</option>
+                    <option value="Neurodivergente">Neurodivergente</option>
+                    <option value="Em avaliação">Em avaliação</option>
+                </select>
+                <small class="text-muted">
+                    Neurotípico: desenvolvimento neurológico típico<br>
+                    Neurodivergente: funcionamento neurológico atípico
+                </small>
+            </div>
+            
+            <div class="col-md-6 mb-3">
+                <label for="level" class="form-label">Nível de Suporte</label>
+                <select class="form-select" id="level" name="level">
+                    <option value="">Selecione...</option>
+                    <option value="Nível 1">Nível 1 - Requer apoio</option>
+                    <option value="Nível 2">Nível 2 - Requer apoio substancial</option>
+                    <option value="Nível 3">Nível 3 - Requer apoio muito substancial</option>
+                    <option value="Não se aplica">Não se aplica</option>
+                </select>
+                <small class="text-muted">
+                    Classificação de acordo com o DSM-5 (principalmente para TEA)
+                </small>
+            </div>
+        </div>
+    </div>
+
+    <!-- Seção: Sensibilidades e Observações -->
+    <div class="form-section">
+        <h5 class="section-title">
+            <i class="bi bi-exclamation-triangle"></i> Sensibilidades e Observações
+        </h5>
+
+        <div class="mb-3">
+            <label for="sensitivities_description" class="form-label">Sensibilidades e Observações</label>
+            <textarea class="form-control" id="sensitivities_description" name="sensitivities_description" rows="5"
+                      placeholder="Descreva as sensibilidades do paciente, por exemplo:
+- Paciente tem forte sensibilidade à luz, sons altos e toques físicos
+- Evitar diretamente todos estes estímulos
+- Outras observações relevantes"></textarea>
+        </div>
+
+        <div class="alert alert-info border-start border-4 border-info">
+            <i class="bi bi-info-circle"></i>
+            <strong>Adicione múltiplas sensibilidades:</strong> Você pode adicionar múltiplas sensibilidades abaixo.
+        </div>
+    </div>
+
+    <!-- Seção: Detalhes das Sensibilidades -->
+    <div class="form-section">
+        <h5 class="section-title">
+            <i class="bi bi-list-ul"></i> Detalhes das Sensibilidades
+        </h5>
+
+        <div id="sensitivities-container">
+            <!-- Sensibilidade inicial -->
+            <div class="sensibility-item mb-3 p-3 border rounded">
+                <div class="row">
+                    <div class="col-md-4 mb-2">
+                        <label class="form-label">Tipo de Sensibilidade</label>
+                        <select class="form-select" name="sensitivity_types[]">
+                            <option value="">Selecione...</option>
+                            <option value="Luz">Luz</option>
+                            <option value="Som">Som</option>
+                            <option value="Toque">Toque</option>
+                            <option value="Textura">Textura</option>
+                            <option value="Cheiro">Cheiro</option>
+                            <option value="Gosto">Gosto</option>
+                            <option value="Movimento">Movimento</option>
+                            <option value="Temperatura">Temperatura</option>
+                            <option value="Outro">Outro</option>
+                            <option value="Não se aplica">Não se aplica</option>
+                        </select>
+                    </div>
+                    <div class="col-md-4 mb-2">
+                        <label class="form-label">Nível de Sensibilidade</label>
+                        <select class="form-select" name="sensitivity_levels[]">
+                            <option value="">Selecione...</option>
+                            <option value="Baixo">Baixo</option>
+                            <option value="Médio">Médio</option>
+                            <option value="Alto">Alto</option>
+                            <option value="Muito Alto">Muito Alto</option>
+                            <option value="Não se aplica">Não se aplica</option>
+                        </select>
+                    </div>
+                    <div class="col-md-4 mb-2">
+                        <label class="form-label">Descrição</label>
+                        <input type="text" class="form-control" name="sensitivity_descriptions[]" placeholder="Ex: Sensibilidade à luz fluorescente">
+                    </div>
+                </div>
+                <div class="d-flex justify-content-end">
+                    <button type="button" class="btn btn-danger btn-sm remove-sensibility" onclick="removeSensibility(this)">Remover</button>
+                </div>
+            </div>
+        </div>
+
+        <div class="mt-3">
+            <button type="button" class="btn btn-outline-primary" onclick="addSensibility()">
+                <i class="bi bi-plus-circle"></i> Adicionar Nova Sensibilidade
+            </button>
+        </div>
+    </div>
+
+    <!-- Seção: Descrição e Histórico -->
+    <div class="form-section">
+        <h5 class="section-title">
+            <i class="bi bi-journal-text"></i> Descrição e Histórico
+        </h5>
+
+        <div class="mb-3">
+            <label for="description" class="form-label">Descrição / Histórico do Paciente</label>
+            <textarea class="form-control" id="description" name="description" rows="10"
+                      placeholder="Inclua informações relevantes como:
+- Histórico familiar
+- Desenvolvimento motor e cognitivo
+- Contexto escolar
+- Comportamentos observados
+- Intervenções anteriores
+- Medicações em uso
+- Comorbidades
+- Pontos fortes e desafios
+- Objetivos terapêuticos"></textarea>
+            <div class="mt-2">
+                <small class="text-muted">
+                    <strong>Caracteres:</strong> <span id="descCharCount">0</span> |
+                    <strong>Palavras:</strong> <span id="descWordCount">0</span> |
+                    <strong>Linhas:</strong> <span id="descLineCount">0</span>
+                </small>
+            </div>
+        </div>
+
+        <div class="alert alert-warning border-start border-4 border-warning">
+            <i class="bi bi-shield-check"></i>
+            <strong>Confidencialidade:</strong> Todas as informações são armazenadas de forma segura e privada,
+            acessíveis apenas por você.
+        </div>
+    </div>
+
+    <!-- Botões de Ação -->
+    <div class="d-flex gap-2 mb-4">
+        <button type="submit" class="btn btn-primary btn-lg" id="submitBtn" onclick="setTimeout(refreshPatientListOnPage, 1000)">
+            <i class="bi bi-check-circle"></i> Cadastrar Paciente
+        </button>
+        <button type="reset" class="btn btn-outline-secondary btn-lg" id="resetBtn">
+            <i class="bi bi-x-circle"></i> Limpar Formulário
+        </button>
+        <button type="button" class="btn btn-outline-info btn-lg" id="exampleBtn">
+            <i class="bi bi-lightning"></i> Preencher Exemplo
+        </button>
+    </div>
+</form>
+
+{% block extra_js %}
+<script>
+    const birthDateInput = document.getElementById('date_of_birth');
+    const ageInput = document.getElementById('age');
+    const ageDisplay = document.getElementById('age-display');
+    const descriptionArea = document.getElementById('description');
+    const descCharCount = document.getElementById('descCharCount');
+    const descWordCount = document.getElementById('descWordCount');
+    const descLineCount = document.getElementById('descLineCount');
+    const outrosCheckbox = document.getElementById('diag_outros');
+    const outrosContainer = document.getElementById('outros-container');
+    const diagnosisOtherInput = document.getElementById('diagnosis_other');
+    const patientForm = document.getElementById('patientForm');
+    const submitBtn = document.getElementById('submitBtn');
+    const exampleBtn = document.getElementById('exampleBtn');
+    
+    // Calcular idade automaticamente
+    birthDateInput.addEventListener('change', function() {
+        if (this.value) {
+            const birthDate = new Date(this.value);
+            const today = new Date();
+            let age = today.getFullYear() - birthDate.getFullYear();
+            const monthDiff = today.getMonth() - birthDate.getMonth();
+            
+            if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
+                age--;
+            }
+            
+            ageInput.value = age;
+            ageDisplay.textContent = age + ' anos';
+            
+            // Mostrar alerta se idade incomum
+            if (age < 0) {
+                ageDisplay.textContent = 'Data inválida';
+                ageDisplay.style.color = '#dc3545';
+            } else if (age > 100) {
+                ageDisplay.textContent = age + ' anos (Verificar data)';
+                ageDisplay.style.color = '#ffc107';
+            } else {
+                ageDisplay.style.color = '#4a6fa5';
+            }
+        }
+    });
+    
+    // Contador de texto para descrição
+    descriptionArea.addEventListener('input', function() {
+        const text = this.value;
+        descCharCount.textContent = text.length.toLocaleString('pt-BR');
+        
+        const words = text.trim().split(/\s+/).filter(word => word.length > 0);
+        descWordCount.textContent = words.length.toLocaleString('pt-BR');
+        
+        const lines = text.split('\n').length;
+        descLineCount.textContent = lines.toLocaleString('pt-BR');
+    });
+    
+    // Mostrar/ocultar campo "Outros"
+    outrosCheckbox.addEventListener('change', function() {
+        if (this.checked) {
+            outrosContainer.style.display = 'block';
+            diagnosisOtherInput.required = true;
+        } else {
+            outrosContainer.style.display = 'none';
+            diagnosisOtherInput.required = false;
+            diagnosisOtherInput.value = '';
+        }
+    });
+    
+    // Preencher exemplo com dados aleatórios
+    exampleBtn.addEventListener('click', function() {
+        // Arrays com possíveis valores para diferentes exemplos
+        const firstNames = ['Ana', 'Pedro', 'Maria', 'João', 'Carla', 'Miguel', 'Fernanda', 'Lucas', 'Juliana', 'Rafael', 'Isabela', 'Gustavo', 'Camila', 'Tiago', 'Larissa'];
+        const lastNames = ['Silva', 'Santos', 'Oliveira', 'Souza', 'Rodrigues', 'Ferreira', 'Almeida', 'Pereira', 'Gomes', 'Lima', 'Ribeiro', 'Martins', 'Costa', 'Carvalho', 'Araújo'];
+
+        const diagnoses = [
+            {tea: true, tdah: false, tda: false, dislexia: false, outros: false, label: 'TEA'},
+            {tea: false, tdah: true, tda: false, dislexia: false, outros: false, label: 'TDAH'},
+            {tea: true, tdah: true, tda: false, dislexia: false, outros: false, label: 'TEA e TDAH'},
+            {tea: false, tdah: false, tda: true, dislexia: false, outros: false, label: 'TDA'},
+            {tea: false, tdah: false, tda: false, dislexia: true, outros: false, label: 'Dislexia'},
+            {tea: false, tdah: false, tda: false, dislexia: false, outros: true, label: 'Outros'}
+        ];
+
+        const neurotypes = ['Neurotípico', 'Neurodivergente', 'Em avaliação'];
+        const levels = ['Nível 1', 'Nível 2', 'Nível 3', 'Não se aplica'];
+
+        // Selecionar aleatoriamente
+        const firstName = firstNames[Math.floor(Math.random() * firstNames.length)];
+        const lastName = lastNames[Math.floor(Math.random() * lastNames.length)];
+        const selectedDiagnosis = diagnoses[Math.floor(Math.random() * diagnoses.length)];
+        const selectedNeurotype = neurotypes[Math.floor(Math.random() * neurotypes.length)];
+        const selectedLevel = levels[Math.floor(Math.random() * levels.length)];
+
+        // Idade aleatória entre 5 e 16 anos
+        const age = Math.floor(Math.random() * 12) + 5;
+
+        // Dados pessoais
+        document.getElementById('first_name').value = firstName;
+        document.getElementById('last_name').value = lastName;
+
+        // Data de nascimento baseada na idade aleatória
+        const today = new Date();
+        const birthYear = today.getFullYear() - age;
+        // Gerar uma data aleatória no ano calculado
+        const month = Math.floor(Math.random() * 12) + 1;
+        const day = Math.floor(Math.random() * 28) + 1; // Evitar problemas com fevereiro
+        const birthDate = `${birthYear}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+        birthDateInput.value = birthDate;
+        birthDateInput.dispatchEvent(new Event('change'));
+
+        // Diagnósticos - limpar primeiro
+        document.getElementById('diag_tea').checked = selectedDiagnosis.tea;
+        document.getElementById('diag_tdah').checked = selectedDiagnosis.tdah;
+        document.getElementById('diag_tda').checked = selectedDiagnosis.tda;
+        document.getElementById('diag_dislexia').checked = selectedDiagnosis.dislexia;
+        document.getElementById('diag_outros').checked = selectedDiagnosis.outros;
+
+        // Mostrar campo "Outros" se selecionado
+        if (selectedDiagnosis.outros) {
+            document.getElementById('outros-container').style.display = 'block';
+            document.getElementById('diagnosis_other').required = true;
+            document.getElementById('diagnosis_other').value = 'Transtorno de Ansiedade';
+        } else {
+            document.getElementById('outros-container').style.display = 'none';
+            document.getElementById('diagnosis_other').required = false;
+            document.getElementById('diagnosis_other').value = '';
+        }
+
+        // Características clínicas
+        document.getElementById('neurotype').value = selectedNeurotype;
+        document.getElementById('level').value = selectedLevel;
+
+        // Gerar descrição clínica realista com base nos dados selecionados
+        const descricao = gerarDescricaoExemplo(firstName, lastName, age, selectedDiagnosis, selectedNeurotype, selectedLevel);
+        descriptionArea.value = descricao;
+        descriptionArea.dispatchEvent(new Event('input'));
+
+        // Preencher sensibilidades com exemplos
+        preencherSensibilidadesExemplo();
+
+        // Animação de sucesso
+        exampleBtn.innerHTML = '<i class="bi bi-check-circle"></i> Exemplo Preenchido!';
+        exampleBtn.classList.remove('btn-outline-info');
+        exampleBtn.classList.add('btn-success');
+
+        setTimeout(() => {
+            exampleBtn.innerHTML = '<i class="bi bi-lightning"></i> Preencher Exemplo';
+            exampleBtn.classList.remove('btn-success');
+            exampleBtn.classList.add('btn-outline-info');
+        }, 2000);
+    });
+
+    // Função para preencher sensibilidades com exemplos
+    function preencherSensibilidadesExemplo() {
+        // Limpar sensibilidades existentes (exceto a primeira)
+        const container = document.getElementById('sensitivities-container');
+        const existingItems = container.querySelectorAll('.sensibility-item');
+        for (let i = 1; i < existingItems.length; i++) {
+            existingItems[i].remove();
+        }
+
+        // Preencher a primeira sensibilidade
+        const firstSensibility = container.querySelector('.sensibility-item');
+        if (firstSensibility) {
+            const typeSelect = firstSensibility.querySelector('select[name="sensitivity_types[]"]');
+            const levelSelect = firstSensibility.querySelector('select[name="sensitivity_levels[]"]');
+            const descInput = firstSensibility.querySelector('input[name="sensitivity_descriptions[]"]');
+
+            if (typeSelect) typeSelect.value = 'Som';
+            if (levelSelect) levelSelect.value = 'Alto';
+            if (descInput) descInput.value = 'Sensibilidade a sons altos e súbitos';
+        }
+
+        // Adicionar mais sensibilidades de exemplo
+        adicionarSensibilidadeExemplo('Luz', 'Médio', 'Fotofobia, sensibilidade à luz fluorescente');
+        adicionarSensibilidadeExemplo('Toque', 'Alto', 'Resistência a toques físicos e vestimentas ásperas');
+    }
+
+    // Função para adicionar uma nova sensibilidade com valores de exemplo
+    function adicionarSensibilidadeExemplo(tipo, nivel, descricao) {
+        const container = document.getElementById('sensitivities-container');
+        const newItem = document.createElement('div');
+        newItem.className = 'sensibility-item mb-3 p-3 border rounded';
+        newItem.innerHTML = `
+            <div class="row">
+                <div class="col-md-4 mb-2">
+                    <label class="form-label">Tipo de Sensibilidade</label>
+                    <select class="form-select" name="sensitivity_types[]">
+                        <option value="">Selecione...</option>
+                        <option value="Luz" ${tipo === 'Luz' ? 'selected' : ''}>Luz</option>
+                        <option value="Som" ${tipo === 'Som' ? 'selected' : ''}>Som</option>
+                        <option value="Toque" ${tipo === 'Toque' ? 'selected' : ''}>Toque</option>
+                        <option value="Textura" ${tipo === 'Textura' ? 'selected' : ''}>Textura</option>
+                        <option value="Cheiro" ${tipo === 'Cheiro' ? 'selected' : ''}>Cheiro</option>
+                        <option value="Gosto" ${tipo === 'Gosto' ? 'selected' : ''}>Gosto</option>
+                        <option value="Movimento" ${tipo === 'Movimento' ? 'selected' : ''}>Movimento</option>
+                        <option value="Temperatura" ${tipo === 'Temperatura' ? 'selected' : ''}>Temperatura</option>
+                        <option value="Outro" ${tipo === 'Outro' ? 'selected' : ''}>Outro</option>
+                    </select>
+                </div>
+                <div class="col-md-4 mb-2">
+                    <label class="form-label">Nível de Sensibilidade</label>
+                    <select class="form-select" name="sensitivity_levels[]">
+                        <option value="">Selecione...</option>
+                        <option value="Baixo" ${nivel === 'Baixo' ? 'selected' : ''}>Baixo</option>
+                        <option value="Médio" ${nivel === 'Médio' ? 'selected' : ''}>Médio</option>
+                        <option value="Alto" ${nivel === 'Alto' ? 'selected' : ''}>Alto</option>
+                        <option value="Muito Alto" ${nivel === 'Muito Alto' ? 'selected' : ''}>Muito Alto</option>
+                    </select>
+                </div>
+                <div class="col-md-4 mb-2">
+                    <label class="form-label">Descrição</label>
+                    <input type="text" class="form-control" name="sensitivity_descriptions[]" placeholder="Ex: Sensibilidade à luz fluorescente" value="${descricao}">
+                </div>
+            </div>
+            <div class="d-flex justify-content-end">
+                <button type="button" class="btn btn-danger btn-sm remove-sensibility" onclick="removeSensibility(this)">Remover</button>
+            </div>
+        `;
+        container.appendChild(newItem);
+
+        // Definir os valores selecionados após criar o HTML
+        const typeSelect = newItem.querySelector('select[name="sensitivity_types[]"]');
+        const levelSelect = newItem.querySelector('select[name="sensitivity_levels[]"]');
+        typeSelect.value = tipo;
+        levelSelect.value = nivel;
+    }
+
+    // Função para gerar descrição clínica realista
+    function gerarDescricaoExemplo(firstName, lastName, age, diagnosis, neurotype, level) {
+        const nomeCompleto = `${firstName} ${lastName}`;
+        const idadeTexto = `${age} ano${age > 1 ? 's' : ''}`;
+
+        let descricao = `HISTÓRICO CLÍNICO\n\n`;
+        descricao += `IDENTIFICAÇÃO:\n`;
+        descricao += `${firstName} é uma criança de ${idadeTexto}, cursando o ${Math.max(1, age - 6)}º ano do ensino fundamental em escola regular.\n\n`;
+
+        descricao += `DESENVOLVIMENTO:\n`;
+        descricao += `- Marcos motores: Dentro do esperado\n`;
+        descricao += `- Linguagem: ${diagnosis.tea ? 'Desenvolvimento atípico, fala aos 3 anos' : 'Desenvolvimento típico'}\n`;
+        descricao += `- Socialização: ${diagnosis.tea ? 'Dificuldades desde a primeira infância' : 'Boas habilidades sociais'}\n\n`;
+
+        descricao += `DIAGNÓSTICOS:\n`;
+        if (diagnosis.tea) descricao += `- TEA (Transtorno do Espectro Autista) - ${level}\n`;
+        if (diagnosis.tdah) descricao += `- TDAH (Transtorno de Déficit de Atenção e Hiperatividade)\n`;
+        if (diagnosis.tda) descricao += `- TDA (Transtorno de Déficit de Atenção)\n`;
+        if (diagnosis.dislexia) descricao += `- Dislexia\n`;
+        if (diagnosis.outros) descricao += `- ${document.getElementById('diagnosis_other').value}\n`;
+
+        descricao += `\nCONTEXTO FAMILIAR:\n`;
+        descricao += `Família nuclear composta por pai, mãe e ${Math.random() > 0.5 ? 'um irmão' : 'uma irmã'} mais ${Math.random() > 0.5 ? 'novo(a)' : 'velho(a)'}. Pais colaborativos e engajados no tratamento.\n\n`;
+
+        descricao += `HISTÓRICO ESCOLAR:\n`;
+        descricao += `Frequenta escola regular desde os ${Math.floor(Math.random() * 5) + 4} anos. ${diagnosis.tdah || diagnosis.tea ? 'Possui acompanhante terapêutico especializado (ATE) desde os 6 anos.' : 'Desempenho acadêmico dentro da média.'}\n`;
+        descricao += `Apresenta ${Math.random() > 0.5 ? 'bom desempenho acadêmico em áreas de interesse' : 'dificuldades em todas as áreas'} com ${Math.random() > 0.5 ? 'dificuldades em português e atividades em grupo' : 'progresso contínuo'}.\n\n`;
+
+        descricao += `COMPORTAMENTO E CARACTERÍSTICAS:\n`;
+        if (diagnosis.tea) {
+            descricao += `- Interesses restritos: ${['Dinossauros', 'Sistema solar', 'Robótica', 'Matemática', 'Animais', 'História'][Math.floor(Math.random() * 6)]}\n`;
+            descricao += `- Hiperfoco: Pode passar horas em atividades de interesse\n`;
+            descricao += `- Rotinas: Necessita de previsibilidade, ansiedade com mudanças\n`;
+        }
+        if (diagnosis.tdah) {
+            descricao += `- Hiperatividade: Dificuldade em permanecer sentado por longos períodos\n`;
+            descricao += `- Impulsividade: Fala sem pensar nas consequências\n`;
+            descricao += `- Dificuldade de atenção: Problemas para manter foco em tarefas\n`;
+        }
+        descricao += `- Comunicação: ${diagnosis.tea ? 'Verbal, mas com dificuldades pragmáticas' : 'Boa comunicação'}\n`;
+        descricao += `- Interação social: ${diagnosis.tea ? 'Preferência por adultos, dificuldade com pares' : 'Boas habilidades sociais'}\n`;
+        descricao += `- Sensorial: ${diagnosis.tea ? 'Hipersensibilidade auditiva e tátil' : 'Sensibilidade dentro da média'}\n\n`;
+
+        descricao += `PONTOS FORTES:\n`;
+        descricao += `- ${['Excelente memória visual', 'Habilidade excepcional com números', 'Criatividade em áreas de interesse', 'Honestidade e transparência', 'Atenção aos detalhes', 'Empatia'][Math.floor(Math.random() * 6)]}\n`;
+        descricao += `- ${['Boa resolução de problemas', 'Capacidade de concentração', 'Criatividade', 'Senso de humor', 'Determinação', 'Colaboração'][Math.floor(Math.random() * 6)]}\n`;
+        descricao += `- ${['Boa memória de longo prazo', 'Habilidade com tecnologia', 'Boa coordenação motora', 'Liderança', 'Organização', 'Autonomia'][Math.floor(Math.random() * 6)]}\n\n`;
+
+        descricao += `DESAFIOS:\n`;
+        descricao += `- ${['Regulação emocional', 'Flexibilidade cognitiva', 'Habilidades sociais', 'Atenção sustentada em atividades não preferidas', 'Organização e planejamento', 'Comunicação não-verbal'][Math.floor(Math.random() * 6)]}\n`;
+        descricao += `- ${['Transições', 'Adaptabilidade', 'Expressão emocional', 'Autonomia', 'Autoestima', 'Comportamento'][Math.floor(Math.random() * 6)]}\n`;
+        descricao += `- ${['Ansiedade', 'Impulsividade', 'Frustração', 'Isolamento', 'Rigidez', 'Comunicação'][Math.floor(Math.random() * 6)]}\n\n`;
+
+        descricao += `INTERVENÇÕES ATUAIS:\n`;
+        descricao += `- Psicopedagogia clínica (${Math.random() > 0.5 ? '2x/semana' : '1x/semana'})\n`;
+        descricao += `- ${diagnosis.tea ? 'Terapia ocupacional com integração sensorial' : 'Psicoterapia cognitivo-comportamental'} (${Math.random() > 0.5 ? '1x/semana' : '2x/semana'})\n`;
+        descricao += `- ${Math.random() > 0.5 ? 'Fonoaudiologia' : 'Terapia de grupo'} (${Math.random() > 0.5 ? '1x/semana' : '2x/semana'})\n`;
+        if (diagnosis.tdah) descricao += `- ATE escolar (diário)\n\n`;
+
+        if (Math.random() > 0.5) {
+            descricao += `MEDICAÇÃO:\n`;
+            descricao += `- ${['Metilfenidato', 'Atomoxetina', 'Risperidona', 'Aripiprazol', 'Clonidina'][Math.floor(Math.random() * 5)]} ${Math.random() * 20 + 5}mg - para ${['TDAH', 'Regulação comportamental', 'Ansiedade', 'Impulsividade', 'Sono'][Math.floor(Math.random() * 5)]}\n\n`;
+        }
+
+        descricao += `OBJETIVOS TERAPÊUTICOS:\n`;
+        descricao += `1. ${['Desenvolver estratégias de regulação emocional', 'Ampliar repertório de comunicação social', 'Melhorar flexibilidade cognitiva', 'Fortalecer habilidades de organização', 'Promover autonomia nas atividades diárias', 'Trabalhar aceitação e autoestima'][Math.floor(Math.random() * 6)]}\n`;
+        descricao += `2. ${['Melhorar habilidades de convivência', 'Aumentar atenção sustentada', 'Reduzir comportamentos desafiadores', 'Fortalecer autoestima', 'Melhorar desempenho acadêmico', 'Desenvolver empatia'][Math.floor(Math.random() * 6)]}\n`;
+        descricao += `3. ${['Melhorar habilidades motoras', 'Aumentar independência', 'Reduzir ansiedade', 'Fortalecer relacionamentos', 'Melhorar expressão emocional', 'Desenvolver resiliência'][Math.floor(Math.random() * 6)]}\n\n`;
+
+        descricao += `EVOLUÇÃO:\n`;
+        descricao += `Paciente em acompanhamento há ${Math.floor(Math.random() * 3) + 1} ano${Math.floor(Math.random() * 3) + 1 > 1 ? 's' : ''}. Observa-se ${Math.random() > 0.5 ? 'progresso significativo' : 'progresso gradual'} na ${['comunicação', 'regulação emocional', 'habilidades sociais', 'autonomia', 'desempenho acadêmico', 'autoestima'][Math.floor(Math.random() * 6)]}. Família reporta ${Math.random() > 0.5 ? 'melhora na qualidade de vida' : 'progresso contínuo'} e ${Math.random() > 0.5 ? 'maior participação' : 'menos desafios'} em atividades ${Math.random() > 0.5 ? 'sociais' : 'acadêmicas'}.\n\n`;
+
+        descricao += `OBSERVAÇÕES:\n`;
+        descricao += `${firstName} é uma criança ${['inteligente', 'curiosa', 'criativa', 'determinada', 'carismática', 'sensível'][Math.floor(Math.random() * 6)]} e ${['com grande potencial', 'em constante desenvolvimento', 'com necessidades especiais', 'com habilidades únicas', 'com personalidade marcante', 'com grande sensibilidade'][Math.floor(Math.random() * 6)]}. Responde bem a ${['abordagens estruturadas', 'intervenções personalizadas', 'atividades lúdicas', 'recompensas positivas', 'rotinas previsíveis', 'ambientes calmos'][Math.floor(Math.random() * 6)]}. Importante ${['respeitar seu tempo de processamento', 'oferecer suporte nas transições', 'reconhecer seus pontos fortes', 'estabelecer limites claros', 'promover sua autonomia', 'valorizar suas conquistas'][Math.floor(Math.random() * 6)]}.\n`;
+
+        return descricao;
+    }
+    
+    // Validação antes de enviar
+    patientForm.addEventListener('submit', function(e) {
+        e.preventDefault();
+        
+        // Validar se pelo menos um diagnóstico foi selecionado ou está em avaliação
+        const checkboxes = document.querySelectorAll('input[name="diagnosis"]:checked');
+        
+        // Validar campo "Outros"
+        if (outrosCheckbox.checked && !diagnosisOtherInput.value.trim()) {
+            alert('Por favor, especifique o diagnóstico no campo "Outros".');
+            diagnosisOtherInput.focus();
+            return;
+        }
+        
+        // Validar idade
+        if (!ageInput.value || ageInput.value < 0 || ageInput.value > 120) {
+            alert('Por favor, verifique a data de nascimento. A idade calculada parece incorreta.');
+            birthDateInput.focus();
+            return;
+        }
+        
+        // Confirmar cadastro
+        const name = document.getElementById('first_name').value + ' ' + document.getElementById('last_name').value;
+        if (confirm(`Confirma o cadastro do paciente ${name}?`)) {
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Cadastrando...';
+            this.submit();
+        }
+    });
+    
+    // Prevenir perda de dados
+    let formModified = false;
+    
+    patientForm.querySelectorAll('input, select, textarea').forEach(element => {
+        element.addEventListener('change', () => formModified = true);
+    });
+    
+    window.addEventListener('beforeunload', function(e) {
+        if (formModified) {
+            e.preventDefault();
+            e.returnValue = 'Você tem alterações não salvas. Deseja realmente sair?';
+            return e.returnValue;
+        }
+    });
+    
+    // Limpar formulário
+    document.getElementById('resetBtn').addEventListener('click', function() {
+        if (formModified) {
+            if (!confirm('Tem certeza que deseja limpar todo o formulário?')) {
+                return false;
+            }
+        }
+        formModified = false;
+        ageDisplay.textContent = '';
+        outrosContainer.style.display = 'none';
+    });
+    
+    // Data máxima = hoje
+    const todayStr = new Date().toISOString().split('T')[0];
+    birthDateInput.setAttribute('max', todayStr);
+
+    // Funções para manipular sensibilidades
+    function addSensibility() {
+        const container = document.getElementById('sensitivities-container');
+        const newItem = document.createElement('div');
+        newItem.className = 'sensibility-item mb-3 p-3 border rounded';
+        newItem.innerHTML = `
+            <div class="row">
+                <div class="col-md-4 mb-2">
+                    <label class="form-label">Tipo de Sensibilidade</label>
+                    <select class="form-select" name="sensitivity_types[]">
+                        <option value="">Selecione...</option>
+                        <option value="Luz">Luz</option>
+                        <option value="Som">Som</option>
+                        <option value="Toque">Toque</option>
+                        <option value="Textura">Textura</option>
+                        <option value="Cheiro">Cheiro</option>
+                        <option value="Gosto">Gosto</option>
+                        <option value="Movimento">Movimento</option>
+                        <option value="Temperatura">Temperatura</option>
+                        <option value="Outro">Outro</option>
+                    </select>
+                </div>
+                <div class="col-md-4 mb-2">
+                    <label class="form-label">Nível de Sensibilidade</label>
+                    <select class="form-select" name="sensitivity_levels[]">
+                        <option value="">Selecione...</option>
+                        <option value="Baixo">Baixo</option>
+                        <option value="Médio">Médio</option>
+                        <option value="Alto">Alto</option>
+                        <option value="Muito Alto">Muito Alto</option>
+                    </select>
+                </div>
+                <div class="col-md-4 mb-2">
+                    <label class="form-label">Descrição</label>
+                    <input type="text" class="form-control" name="sensitivity_descriptions[]" placeholder="Ex: Sensibilidade à luz fluorescente">
+                </div>
+            </div>
+            <div class="d-flex justify-content-end">
+                <button type="button" class="btn btn-danger btn-sm remove-sensibility" onclick="removeSensibility(this)">Remover</button>
+            </div>
+        `;
+        container.appendChild(newItem);
+    }
+
+    function removeSensibility(button) {
+        const item = button.closest('.sensibility-item');
+        if (document.querySelectorAll('.sensibility-item').length > 1) {
+            item.remove();
+        } else {
+            alert('Você deve ter pelo menos uma sensibilidade registrada.');
+        }
+    }
+</script>
+{% endblock %}
+{% endblock %}

@@ -1,0 +1,88 @@
+# =============================================================================
+# Cloud Build Pipeline — TEAChat / SYMYAH
+# =============================================================================
+# Executado automaticamente pelo Cloud Build quando há push no repositório.
+# Etapas: Build da imagem → Push para Artifact Registry → Deploy no Cloud Run
+#
+# Variáveis substituídas pelo Cloud Build:
+#   $PROJECT_ID   — ID do projeto GCP (automático)
+#   $COMMIT_SHA   — Hash do commit (automático)
+#   $BRANCH_NAME  — Nome do branch (automático)
+# =============================================================================
+
+substitutions:
+  _REGION: "us-central1"
+  _SERVICE_NAME: "teachat-api"
+  _REPO_NAME: "teachat"
+  _IMAGE_NAME: "api"
+  _MEMORY: "512Mi"
+  _CPU: "1"
+  _MAX_INSTANCES: "2"
+  _MIN_INSTANCES: "0"
+
+steps:
+  # -----------------------------------------------------------------------
+  # Etapa 1: Build da imagem Docker
+  # -----------------------------------------------------------------------
+  - name: "gcr.io/cloud-builders/docker"
+    id: "build-image"
+    args:
+      - "build"
+      - "-t"
+      - "${_REGION}-docker.pkg.dev/$PROJECT_ID/${_REPO_NAME}/${_IMAGE_NAME}:$COMMIT_SHA"
+      - "-t"
+      - "${_REGION}-docker.pkg.dev/$PROJECT_ID/${_REPO_NAME}/${_IMAGE_NAME}:latest"
+      - "-f"
+      - "GCP/Dockerfile.cloudrun"
+      - "."  # contexto é a raiz do projeto
+    dir: "."
+
+  # -----------------------------------------------------------------------
+  # Etapa 2: Push da imagem para o Artifact Registry
+  # -----------------------------------------------------------------------
+  - name: "gcr.io/cloud-builders/docker"
+    id: "push-image"
+    args:
+      - "push"
+      - "--all-tags"
+      - "${_REGION}-docker.pkg.dev/$PROJECT_ID/${_REPO_NAME}/${_IMAGE_NAME}"
+    waitFor: ["build-image"]
+
+  # -----------------------------------------------------------------------
+  # Etapa 3: Deploy no Cloud Run
+  # -----------------------------------------------------------------------
+  - name: "gcr.io/google.com/cloudsdktool/cloud-sdk"
+    id: "deploy-cloud-run"
+    entrypoint: "gcloud"
+    args:
+      - "run"
+      - "deploy"
+      - "${_SERVICE_NAME}"
+      - "--image=${_REGION}-docker.pkg.dev/$PROJECT_ID/${_REPO_NAME}/${_IMAGE_NAME}:$COMMIT_SHA"
+      - "--region=${_REGION}"
+      - "--platform=managed"
+      - "--allow-unauthenticated"
+      - "--port=8080"
+      - "--memory=${_MEMORY}"
+      - "--cpu=${_CPU}"
+      - "--min-instances=${_MIN_INSTANCES}"
+      - "--max-instances=${_MAX_INSTANCES}"
+      - "--concurrency=80"
+      - "--timeout=300"
+      # Secrets injetados do Secret Manager como variáveis de ambiente
+      - "--set-secrets=OPENAI_API_KEY=OPENAI_API_KEY:latest,GOOGLE_API_KEY=GOOGLE_API_KEY:latest,DATABASE_URL=DATABASE_URL:latest,SECRET_KEY=SECRET_KEY:latest"
+      # Variáveis de ambiente não-sensíveis
+      - "--set-env-vars=HOST=0.0.0.0,PORT=8080,MAX_CONTEXT_TOKENS=2048,RAG_TOP_K=4,RAG_MIN_SIMILARITY=0.5,DEFAULT_MODEL=gpt-3.5-turbo,TRAINING_BATCH_SIZE=4,CHUNK_SIZE=500,CHUNK_OVERLAP=50"
+    waitFor: ["push-image"]
+
+# Imagem final gerada pelo pipeline
+images:
+  - "${_REGION}-docker.pkg.dev/$PROJECT_ID/${_REPO_NAME}/${_IMAGE_NAME}:$COMMIT_SHA"
+  - "${_REGION}-docker.pkg.dev/$PROJECT_ID/${_REPO_NAME}/${_IMAGE_NAME}:latest"
+
+# Configurações do build
+options:
+  logging: CLOUD_LOGGING_ONLY
+  machineType: "E2_MEDIUM"  # Máquina gratuita (120 min/dia no Free Tier)
+
+timeout: "1200s"  # 20 minutos máximo de build

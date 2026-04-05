@@ -1,0 +1,19 @@
+{% extends "base.html" %}
+
+{% block title %}Erro do Servidor - 500{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center mt-5">
+    <div class="col-md-6 text-center">
+        <i class="bi bi-x-octagon display-1 text-danger"></i>
+        <h1 class="display-4 mt-3">500</h1>
+        <h3 class="mb-4">Erro Interno do Servidor</h3>
+        <p class="text-muted mb-4">
+            Desculpe, algo deu errado no servidor. Nossa equipe foi notificada e está trabalhando para resolver o problema.
+        </p>
+        <a href="{{ url_for('dashboard') }}" class="btn btn-primary">
+            <i class="bi bi-house-door"></i> Voltar ao Dashboard
+        </a>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,264 @@
+{% extends "base.html" %}
+
+{% block title %}Histórico de Documentos - TEAChat{% endblock %}
+
+{% block extra_css %}
+<style>
+    .document-card {
+        transition: all 0.3s;
+        border-left: 4px solid var(--primary-color);
+    }
+
+    .document-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 8px rgba(0,0,0,0.12);
+    }
+
+    .history-filters {
+        background: white;
+        padding: 1.5rem;
+        border-radius: 10px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.08);
+        margin-bottom: 1.5rem;
+    }
+
+    .document-date {
+        font-size: 0.875rem;
+        color: var(--secondary-color);
+    }
+
+    .action-badge {
+        text-transform: uppercase;
+        font-size: 0.75rem;
+    }
+
+    .document-content {
+        max-height: 100px;
+        overflow-y: auto;
+    }
+    
+    .action-buttons {
+        margin-top: 15px;
+        padding-top: 15px;
+        border-top: 1px solid #eee;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2><i class="bi bi-file-text"></i> Histórico de Documentos</h2>
+    <a href="{{ url_for('history') }}" class="btn btn-outline-secondary">
+        <i class="bi bi-arrow-left"></i> Voltar
+    </a>
+</div>
+
+<!-- Filtros -->
+<div class="history-filters">
+    <form method="GET" class="row g-3">
+        <div class="col-md-3">
+            <label for="patient_id" class="form-label">Paciente</label>
+            <select class="form-select patient-select" id="patient_id" name="patient_id">
+                <option value="">Todos os pacientes</option>
+                {% for patient in patients %}
+                    <option value="{{ patient.id }}" {% if request.args.get('patient_id') == patient.id|string %}selected{% endif %}>
+                        {{ patient.name or patient.first_name + " " + patient.last_name }}
+                    </option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="col-md-3">
+            <label for="action_type" class="form-label">Tipo de Ação</label>
+            <select class="form-select" id="action_type" name="action_type">
+                <option value="" {% if request.args.get('action_type', '') == '' %}selected{% endif %}>Todos</option>
+                <option value="created" {% if request.args.get('action_type') == 'created' %}selected{% endif %}>Criado</option>
+                <option value="updated" {% if request.args.get('action_type') == 'updated' %}selected{% endif %}>Atualizado</option>
+                <option value="deleted" {% if request.args.get('action_type') == 'deleted' %}selected{% endif %}>Excluído</option>
+            </select>
+        </div>
+        <div class="col-md-2">
+            <label for="limit" class="form-label">Resultados por página</label>
+            <select class="form-select" id="limit" name="limit">
+                <option value="10" {% if request.args.get('limit', '10') == '10' %}selected{% endif %}>10</option>
+                <option value="25" {% if request.args.get('limit', '10') == '25' %}selected{% endif %}>25</option>
+                <option value="50" {% if request.args.get('limit', '10') == '50' %}selected{% endif %}>50</option>
+            </select>
+        </div>
+        <div class="col-md-2">
+            <label for="offset" class="form-label">Página</label>
+            <input type="number" class="form-control" id="offset" name="offset"
+                   value="{{ request.args.get('offset', '0') }}" min="0">
+        </div>
+        <div class="col-md-2 d-flex align-items-end">
+            <button type="submit" class="btn btn-primary w-100">
+                <i class="bi bi-funnel"></i> Filtrar
+            </button>
+        </div>
+    </form>
+</div>
+
+<!-- Lista de documentos -->
+{% if documents and documents|length > 0 %}
+<div class="row">
+    {% for document in documents %}
+    <div class="col-md-6 col-lg-4 mb-4">
+        <div class="card document-card h-100">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-start mb-2">
+                    <span class="badge bg-{% if document.action_type == 'created' %}success{% elif document.action_type == 'updated' %}warning{% elif document.action_type == 'deleted' %}danger{% else %}secondary{% endif %} action-badge">
+                        {{ document.action_type }}
+                    </span>
+                    <span class="document-date">{{ document.action_date[:16] if document.action_date else "N/A" }}</span>
+                </div>
+
+                <h6 class="card-title">{{ document.title }}</h6>
+
+                <p class="card-text small mb-1">
+                    <strong>Tipo:</strong> {{ document.source_type }}
+                </p>
+
+                <p class="card-text small mb-2 document-content">
+                    {{ document.text_content[:100] }}{% if document.text_content|length > 100 %}...{% endif %}
+                </p>
+
+                <div class="d-flex justify-content-between">
+                    <small class="text-muted">
+                        <i class="bi bi-person"></i> {{ document.user_id }}
+                    </small>
+                    <small class="text-muted">
+                        <i class="bi bi-person-check"></i> Paciente {{ document.patient_id }}
+                    </small>
+                </div>
+
+                {% if document.metadata and document.metadata|length > 0 %}
+                <details class="mt-2">
+                    <summary class="text-muted small">Ver metadados</summary>
+                    <div class="mt-2 small">
+                        {% for key, value in document.metadata.items() %}
+                        <div><strong>{{ key }}:</strong> {{ value }}</div>
+                        {% endfor %}
+                    </div>
+                </details>
+                {% endif %}
+                
+                <div class="action-buttons">
+                    <button class="btn btn-sm btn-outline-warning me-2" 
+                            onclick="editDocument({{ document.id }}, '{{ document.title|replace("'", "\\'") }}')">
+                        <i class="bi bi-pencil"></i> Editar
+                    </button>
+                    <button class="btn btn-sm btn-outline-danger" 
+                            onclick="deleteDocument({{ document.id }}, '{{ document.title[:30]|replace("'", "\\'") }}...')">
+                        <i class="bi bi-trash"></i> Excluir
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+
+<!-- Paginação -->
+{% if total > limit %}
+<div class="d-flex justify-content-center mt-4">
+    <nav>
+        <ul class="pagination">
+            {% set current_offset = request.args.get('offset', '0')|int %}
+            {% set current_limit = request.args.get('limit', '10')|int %}
+
+            {% if current_offset > 0 %}
+                <li class="page-item">
+                    <a class="page-link" href="{{ url_for('history_documents', patient_id=request.args.get('patient_id'), action_type=request.args.get('action_type'), limit=current_limit, offset=max(0, current_offset - current_limit)) }}">Anterior</a>
+                </li>
+            {% endif %}
+
+            {% set page_count = (total / current_limit)|round(0, 'ceil')|int %}
+            {% for page in range(max(1, (current_offset // current_limit) - 2), min(page_count + 1, (current_offset // current_limit) + 4)) %}
+                {% set page_offset = (page - 1) * current_limit %}
+                <li class="page-item {% if page_offset == current_offset %}active{% endif %}">
+                    <a class="page-link" href="{{ url_for('history_documents', patient_id=request.args.get('patient_id'), action_type=request.args.get('action_type'), limit=current_limit, offset=page_offset) }}">{{ page }}</a>
+                </li>
+            {% endfor %}
+
+            {% if current_offset + current_limit < total %}
+                <li class="page-item">
+                    <a class="page-link" href="{{ url_for('history_documents', patient_id=request.args.get('patient_id'), action_type=request.args.get('action_type'), limit=current_limit, offset=current_offset + current_limit) }}">Próxima</a>
+                </li>
+            {% endif %}
+        </ul>
+    </nav>
+</div>
+{% endif %}
+
+{% else %}
+<div class="alert alert-info">
+    <i class="bi bi-file-text"></i> Nenhum documento registrado no histórico.
+</div>
+{% endif %}
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // Atualizar a lista de pacientes quando a página carregar
+    document.addEventListener('DOMContentLoaded', function() {
+        updatePatientList();
+    });
+    
+    async function deleteDocument(docId, docTitle) {
+        const confirmed = confirm(`Tem certeza que deseja excluir este documento: "${docTitle}"? Esta ação não pode ser desfeita.`);
+        
+        if (confirmed) {
+            try {
+                const response = await fetch(`/api/history/documents/${docId}`, {
+                    method: 'DELETE',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
+                });
+                
+                if (response.ok) {
+                    // Recarregar a página para atualizar a lista
+                    location.reload();
+                } else {
+                    const error = await response.json();
+                    alert(`Erro ao excluir documento: ${error.message || 'Erro desconhecido'}`);
+                }
+            } catch (error) {
+                console.error('Erro ao excluir documento:', error);
+                alert('Erro de conexão ao tentar excluir o documento.');
+            }
+        }
+    }
+    
+    function editDocument(docId, title) {
+        // Solicitar novo título ao usuário
+        const newTitle = prompt('Editar título do documento:', title);
+        if (newTitle !== null) {
+            updateDocument(docId, newTitle);
+        }
+    }
+    
+    async function updateDocument(docId, newTitle) {
+        try {
+            const formData = new FormData();
+            formData.append('title', newTitle);
+            
+            const response = await fetch(`/api/history/documents/${docId}`, {
+                method: 'PUT',
+                body: formData
+            });
+
+            if (response.ok) {
+                // Recarregar a página para atualizar a lista
+                location.reload();
+            } else {
+                const error = await response.json();
+                alert(`Erro ao atualizar documento: ${error.message || 'Erro desconhecido'}`);
+            }
+        } catch (error) {
+            console.error('Erro ao atualizar documento:', error);
+            alert('Erro de conexão ao tentar atualizar o documento.');
+        }
+    }
+</script>
+{% endblock %}

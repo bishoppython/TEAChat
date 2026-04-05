@@ -1,0 +1,60 @@
+# Core dependencies
+fastapi
+uvicorn
+pydantic
+python-multipart
+python-dotenv
+python-jose[cryptography]
+passlib[argon2]
+PyJWT
+
+# Database dependencies
+psycopg2-binary
+pgvector
+
+# AI/ML dependencies
+torch
+transformers
+google-genai
+openai>=1.0.0
+langchain==0.2.3
+langchain-community==0.2.4
+langchain-core==0.2.5
+langchain-huggingface
+langchain-text-splitters
+langchain-qdrant
+qdrant-client
+sentence-transformers
+peft
+bitsandbytes
+accelerate
+trl
+datasets
+
+# Data processing
+PyPDF2
+python-docx
+python-pptx
+pandas
+numpy
+scipy
+PyMuPDF
+
+# Web interface
+streamlit
+flask
+requests
+plotly
+
+# Utilities
+tiktoken
+huggingface-hub
+datasets
+markdown
+
+# Testing and evaluation
+pytest
+scikit-learn
+
+# Text processing for anonymization
+nltk

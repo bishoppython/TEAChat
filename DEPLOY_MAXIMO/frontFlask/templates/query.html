@@ -1,0 +1,235 @@
+{% extends "base.html" %}
+
+{% block title %}Consultar - TEAChat {% endblock %}
+
+{% block extra_css %}
+<style>
+    .markdown-content h2, .markdown-content h3, .markdown-content h4 {
+        margin-top: 1.5rem;
+        margin-bottom: 1rem;
+        color: #2c3e50;
+    }
+
+    .markdown-content h2 {
+        font-size: 1.5rem;
+        border-bottom: 2px solid #3498db;
+        padding-bottom: 0.3rem;
+    }
+
+    .markdown-content h3 {
+        font-size: 1.25rem;
+        border-bottom: 1px solid #3498db;
+        padding-bottom: 0.3rem;
+    }
+
+    .markdown-content h4 {
+        font-size: 1.1rem;
+        margin-top: 1.2rem;
+        margin-bottom: 0.8rem;
+    }
+
+    .markdown-content ul, .markdown-content ol {
+        padding-left: 1.5rem;
+        margin-bottom: 1rem;
+    }
+
+    .markdown-content li {
+        margin-bottom: 0.5rem;
+    }
+
+    .markdown-content p {
+        margin-bottom: 1rem;
+        line-height: 1.6;
+    }
+
+    .markdown-content blockquote {
+        border-left: 4px solid #3498db;
+        padding-left: 1rem;
+        margin-left: 0;
+        margin-right: 0;
+        color: #555;
+    }
+
+    .markdown-content pre {
+        background-color: #f8f9fa;
+        border: 1px solid #e9ecef;
+        border-radius: 0.375rem;
+        padding: 1rem;
+        overflow-x: auto;
+        margin-bottom: 1rem;
+    }
+
+    .markdown-content code {
+        background-color: #f8f9fa;
+        padding: 0.2rem 0.4rem;
+        border-radius: 0.25rem;
+        font-size: 0.875em;
+    }
+
+    .markdown-content strong {
+        font-weight: 600;
+    }
+
+    .markdown-content em {
+        font-style: italic;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<h2 class="mb-4"><i class="bi bi-search"></i> Consultar Sistema de IA</h2>
+
+<div class="card">
+    <div class="card-body">
+        <form method="POST" action="{{ url_for('query') }}">
+            <div class="mb-3">
+                <label for="patient_id" class="form-label">Paciente <span class="text-danger">*</span></label>
+                <select class="form-select patient-select" id="patient_id" name="patient_id" required>
+                    <option value="">Selecione um paciente...</option>
+                    {% for patient in patients %}
+                        <option value="{{ patient.id }}">{{ patient.name or (patient.first_name or '') + " " + (patient.last_name or '') }}</option>
+                    {% endfor %}
+                </select>
+                <div class="invalid-feedback">Por favor, selecione um paciente.</div>
+                <small class="text-muted">Selecione o paciente para restringir a busca</small>
+            </div>
+
+            <div class="mb-3">
+                <label for="query" class="form-label">Sua Pergunta</label>
+                <textarea class="form-control" id="query" name="query" rows="4"
+                          placeholder="Digite sua pergunta aqui..." required></textarea>
+                <small class="text-muted">
+                    Exemplo: "Quais são os sintomas de ansiedade relatados pelo paciente?"
+                </small>
+            </div>
+
+            <button type="submit" class="btn btn-primary">
+                <i class="bi bi-send"></i> Consultar
+            </button>
+        </form>
+    </div>
+</div>
+
+<script>
+    // Carregar pacientes quando o DOM estiver pronto
+    document.addEventListener('DOMContentLoaded', function() {
+        updatePatientList();
+
+        // Adicionar validação de formulário para garantir que um paciente seja selecionado
+        const form = document.querySelector('form');
+        const patientSelect = document.getElementById('patient_id');
+
+        form.addEventListener('submit', function(e) {
+            if (patientSelect.value === '') {
+                e.preventDefault();
+                alert('Selecione um paciente antes de continuar!');
+                patientSelect.focus();
+                return false;
+            }
+        });
+    });
+</script>
+
+{% if result %}
+<div class="result-container mt-4">
+    <h4 class="mb-3"><i class="bi bi-chat-square-text"></i> Resposta</h4>
+    <div class="alert alert-light border p-4 markdown-content">
+        {{ result.response|replace('\n', '<br>')|replace('## ', '<h4>')|replace('**', '<strong>')|replace('<strong><strong>', '<strong>')|replace('</strong></strong>', '</strong>')|safe }}
+    </div>
+
+    <hr class="my-4">
+
+    <h5 class="mb-3">Métricas Detalhadas da Consulta</h5>
+    <div class="row">
+        <!-- Métricas de latência -->
+        <div class="col-md-3">
+            <div class="card bg-light">
+                <div class="card-body text-center">
+                    <i class="bi bi-clock text-primary display-6"></i>
+                    <h4 class="mt-2">{{ "%.2f"|format(result.latency_seconds or 0) }}s</h4>
+                    <p class="text-muted mb-0">Tempo de Resposta</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Métricas de custo -->
+        <div class="col-md-3">
+            <div class="card bg-light">
+                <div class="card-body text-center">
+                    <i class="bi bi-currency-dollar text-success display-6"></i>
+                    <h4 class="mt-2">${{ "%.4f"|format(result.total_cost_usd or 0) }}</h4>
+                    <p class="text-muted mb-0">Custo Estimado</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Métricas de recuperação -->
+        <div class="col-md-3">
+            <div class="card bg-light">
+                <div class="card-body text-center">
+                    <i class="bi bi-search text-info display-6"></i>
+                    <h4 class="mt-2">{{ "%.2f"|format(result.retrieval_precision or 0) }}</h4>
+                    <p class="text-muted mb-0">Precisão</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-3">
+            <div class="card bg-light">
+                <div class="card-body text-center">
+                    <i class="bi bi-arrow-repeat text-info display-6"></i>
+                    <h4 class="mt-2">{{ "%.2f"|format(result.retrieval_recall or 0) }}</h4>
+                    <p class="text-muted mb-0">Recall</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row mt-3">
+        <!-- Métricas de fidelidade -->
+        <div class="col-md-3">
+            <div class="card bg-light">
+                <div class="card-body text-center">
+                    <i class="bi bi-check-circle text-warning display-6"></i>
+                    <h4 class="mt-2">{{ "%.2f"|format(result.faithfulness_score or 0) }}</h4>
+                    <p class="text-muted mb-0">Fidelidade</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Métricas de relevância -->
+        <div class="col-md-3">
+            <div class="card bg-light">
+                <div class="card-body text-center">
+                    <i class="bi bi-stars text-danger display-6"></i>
+                    <h4 class="mt-2">{{ "%.2f"|format(result.answer_relevance_score or 0) }}</h4>
+                    <p class="text-muted mb-0">Relevância</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Métricas NDCG -->
+        <div class="col-md-3">
+            <div class="card bg-light">
+                <div class="card-body text-center">
+                    <i class="bi bi-graph-up text-secondary display-6"></i>
+                    <h4 class="mt-2">{{ "%.2f"|format(result.ndcg_score or 0) }}</h4>
+                    <p class="text-muted mb-0">NDCG</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Métricas de legibilidade -->
+        <div class="col-md-3">
+            <div class="card bg-light">
+                <div class="card-body text-center">
+                    <i class="bi bi-text-center text-dark display-6"></i>
+                    <h4 class="mt-2">{{ "%.1f"|format(result.flesch_reading_ease or 0) }}</h4>
+                    <p class="text-muted mb-0">Legibilidade</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+{% endblock %}

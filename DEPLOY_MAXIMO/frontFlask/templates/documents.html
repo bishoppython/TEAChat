@@ -1,0 +1,405 @@
+{% extends "base.html" %}
+
+{% block title %}Adicionar Documento - TEAChat{% endblock %}
+
+{% block content %}
+<h2 class="mb-4"><i class="bi bi-file-text"></i> Adicionar Documento Clínico</h2>
+
+<div class="row">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-body">
+                <form method="POST" action="{{ url_for('documents') }}" id="documentForm">
+                    <div class="mb-3">
+                        <label for="patient_id" class="form-label">Paciente <span class="text-danger">*</span></label>
+                        <select class="form-select patient-select" id="patient_id" name="patient_id" required>
+                            <option value="">Selecione um paciente...</option>
+                            {% for patient in patients %}
+                                <option value="{{ patient.id }}">{{ patient.name or (patient.first_name or '') + " " + (patient.last_name or '') }}</option>
+                            {% endfor %}
+                        </select>
+                        <div class="invalid-feedback">Por favor, selecione um paciente.</div>
+                        <small class="text-muted">Selecione o paciente para o qual este documento se refere</small>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="title" class="form-label">Título do Documento <span class="text-danger">*</span></label>
+                        <input type="text" class="form-control" id="title" name="title"
+                               placeholder="Ex: Relatório de Avaliação Inicial" required>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="text" class="form-label">Conteúdo do Documento <span class="text-danger">*</span></label>
+                        <textarea class="form-control" id="text" name="text" rows="15"
+                                  placeholder="Digite ou cole o conteúdo do documento aqui..." required></textarea>
+                        <small class="text-muted">
+                            <i class="bi bi-info-circle"></i> Cole aqui notas clínicas, observações, relatórios ou qualquer texto relevante
+                        </small>
+                        <div class="mt-2">
+                            <small class="text-muted">
+                                <strong>Caracteres:</strong> <span id="charCount">0</span> |
+                                <strong>Palavras:</strong> <span id="wordCount">0</span> |
+                                <strong>Linhas:</strong> <span id="lineCount">0</span>
+                            </small>
+                        </div>
+                    </div>
+
+                    <div class="d-flex gap-2">
+                        <button type="submit" class="btn btn-primary" id="submitBtn">
+                            <i class="bi bi-check-circle"></i> Adicionar Documento
+                        </button>
+                        <button type="reset" class="btn btn-outline-secondary" id="resetBtn">
+                            <i class="bi bi-x-circle"></i> Limpar
+                        </button>
+                        <button type="button" class="btn btn-outline-info" id="autoFillBtn">
+                            <i class="bi bi-lightning"></i> Exemplo
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+<script>
+    // Carregar pacientes quando o DOM estiver pronto
+    document.addEventListener('DOMContentLoaded', function() {
+        updatePatientList();
+    });
+</script>
+    
+    <div class="col-md-4">
+        <div class="card">
+            <div class="card-header">
+                <i class="bi bi-lightbulb"></i> Dicas
+            </div>
+            <div class="card-body">
+                <h6>Como usar:</h6>
+                <ul class="small mb-3">
+                    <li>O documento será automaticamente dividido em chunks para melhor processamento</li>
+                    <li>Todos os documentos são indexados e podem ser pesquisados através das consultas</li>
+                    <li>Você pode adicionar múltiplos documentos para o mesmo paciente</li>
+                </ul>
+                
+                <h6>Boas práticas:</h6>
+                <ul class="small mb-0">
+                    <li>Use títulos descritivos e claros</li>
+                    <li>Inclua data e contexto quando relevante</li>
+                    <li>Mantenha a linguagem profissional</li>
+                    <li>Revise o conteúdo antes de salvar</li>
+                </ul>
+            </div>
+        </div>
+        
+        <div class="card mt-3">
+            <div class="card-header">
+                <i class="bi bi-info-circle"></i> Tipos de Documento
+            </div>
+            <div class="card-body">
+                <ul class="small mb-0">
+                    <li><strong>Notas de Sessão:</strong> Anotações de atendimentos</li>
+                    <li><strong>Relatórios:</strong> Avaliações e diagnósticos</li>
+                    <li><strong>Histórico:</strong> Informações do paciente</li>
+                    <li><strong>Observações:</strong> Comportamentos e progressos</li>
+                    <li><strong>Planos:</strong> Estratégias de intervenção</li>
+                </ul>
+            </div>
+        </div>
+        
+        <div class="card mt-3 bg-light">
+            <div class="card-body text-center">
+                <i class="bi bi-shield-check text-success display-6"></i>
+                <p class="small mb-0 mt-2">
+                    <strong>Seguro e Privado</strong><br>
+                    Seus documentos são criptografados e protegidos
+                </p>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% block extra_js %}
+<script>
+    // Passar o nome do usuário do contexto do template para o JavaScript
+    const user_full_name = "{{ user_info.full_name if user_info and user_info.full_name else 'Profissional' | e }}";
+
+    const textArea = document.getElementById('text');
+    const charCount = document.getElementById('charCount');
+    const wordCount = document.getElementById('wordCount');
+    const lineCount = document.getElementById('lineCount');
+    const submitBtn = document.getElementById('submitBtn');
+    const documentForm = document.getElementById('documentForm');
+    const autoFillBtn = document.getElementById('autoFillBtn');
+    const resetBtn = document.getElementById('resetBtn');
+    
+    // Contador de caracteres, palavras e linhas em tempo real
+    function updateCounts() {
+        const text = textArea.value;
+        
+        // Contar caracteres
+        charCount.textContent = text.length.toLocaleString('pt-BR');
+        
+        // Contar palavras (excluindo espaços vazios)
+        const words = text.trim().split(/\s+/).filter(word => word.length > 0);
+        wordCount.textContent = words.length.toLocaleString('pt-BR');
+        
+        // Contar linhas
+        const lines = text.split('\n').length;
+        lineCount.textContent = lines.toLocaleString('pt-BR');
+    }
+    
+    textArea.addEventListener('input', updateCounts);
+    
+    // Auto-preencher com exemplo detalhado
+    autoFillBtn.addEventListener('click', function() {
+        const today = new Date();
+        const dateStr = today.toLocaleDateString('pt-BR', { 
+            year: 'numeric', 
+            month: 'long', 
+            day: 'numeric' 
+        });
+        
+        document.getElementById('patient_id').value = '1';
+        document.getElementById('title').value = 'Relatório de Avaliação Inicial - Exemplo';
+        textArea.value = `RELATÓRIO DE AVALIAÇÃO PSICOPEDAGÓGICA INICIAL
+
+Data: ${dateStr}
+Paciente ID: 1
+Profissional: ${user_full_name || 'Dr(a). [Nome]'}
+
+═══════════════════════════════════════════════════════════
+
+1. IDENTIFICAÇÃO DO PACIENTE
+   - Nome: [Paciente Exemplo]
+   - Idade: 10 anos
+   - Série: 5º ano do Ensino Fundamental
+   - Escola: [Nome da Escola]
+
+2. MOTIVO DA CONSULTA
+   Paciente procurou atendimento devido a dificuldades de aprendizagem
+   e baixo rendimento escolar, especialmente em matemática. Os pais
+   relatam que a criança demonstra ansiedade em situações de avaliação
+   e baixa autoestima relacionada ao desempenho acadêmico.
+
+3. QUEIXA PRINCIPAL
+   - Dificuldade acentuada em matemática (cálculos e raciocínio lógico)
+   - Problemas de concentração durante as atividades escolares
+   - Baixa autoestima em relação aos estudos
+   - Resistência para fazer lição de casa
+   - Comparação negativa com colegas de classe
+
+4. HISTÓRICO EVOLUTIVO
+   Criança nascida de parto normal, sem intercorrências. Desenvolvimento
+   motor e de linguagem dentro dos padrões esperados. Frequentou creche
+   desde os 2 anos. Adaptação escolar inicial sem problemas significativos.
+
+   As dificuldades começaram a se manifestar há aproximadamente 2 anos,
+   coincidindo com o aumento da complexidade dos conteúdos matemáticos.
+   Não há histórico de repetência escolar.
+
+5. HISTÓRICO FAMILIAR
+   - Pais casados, convivendo com o filho
+   - Irmã mais velha (14 anos), sem dificuldades escolares
+   - Relação familiar aparentemente estável
+   - Pais preocupados e colaborativos com o processo
+
+6. OBSERVAÇÕES COMPORTAMENTAIS DA SESSÃO
+   Durante a avaliação, o paciente apresentou-se:
+   - Cooperativo e educado
+   - Inicialmente tímido, mas se abriu gradualmente
+   - Demonstrou interesse em aprender
+   - Evidenciou frustração ao lidar com exercícios matemáticos
+   - Níveis adequados de linguagem oral e compreensão verbal
+   - Boa memória para fatos cotidianos
+
+7. AVALIAÇÃO PRELIMINAR
+   PONTOS FORTES:
+   - Boa habilidade verbal
+   - Interesse por leitura
+   - Criatividade
+   - Boa relação interpessoal
+
+   ÁREAS DE DIFICULDADE:
+   - Raciocínio lógico-matemático
+   - Atenção sustentada em tarefas complexas
+   - Autoconfiança acadêmica
+   - Estratégias de resolução de problemas
+
+8. HIPÓTESES DIAGNÓSTICAS INICIAIS
+   - Possível discalculia (a investigar)
+   - Dificuldades atencionais (a investigar)
+   - Aspectos emocionais interferindo no desempenho
+   - Necessidade de estratégias pedagógicas diferenciadas
+
+9. ÁREAS A INVESTIGAR NAS PRÓXIMAS SESSÕES
+   1. Habilidades matemáticas específicas (numeração, cálculo, raciocínio)
+   2. Processos atencionais e de memória de trabalho
+   3. Aspectos emocionais (ansiedade, autoestima)
+   4. Estratégias de estudo e metacognição
+   5. Dinâmica familiar e expectativas
+   6. Contexto escolar e metodologias utilizadas
+
+10. PLANO DE INTERVENÇÃO PROPOSTO
+    FASE 1 (Próximas 4 sessões):
+    - Avaliação formal das habilidades matemáticas
+    - Avaliação neuropsicológica focada em atenção e funções executivas
+    - Entrevista com a escola para compreensão do contexto
+    - Observação das estratégias de aprendizagem
+
+    FASE 2 (A definir após avaliações):
+    - Intervenção psicopedagógica focada
+    - Orientação aos pais
+    - Articulação com a escola
+    - Possíveis encaminhamentos (se necessário)
+
+11. RECOMENDAÇÕES IMEDIATAS
+    Para os pais:
+    - Evitar comparações com outros alunos
+    - Reforçar os pontos fortes da criança
+    - Estabelecer rotina de estudos sem pressão excessiva
+    - Valorizar o esforço, não apenas o resultado
+
+    Para a escola:
+    - Fornecer tempo adicional em avaliações
+    - Usar materiais concretos no ensino de matemática
+    - Reforçar positivamente as tentativas
+    - Considerar avaliações alternativas
+
+12. PRÓXIMOS PASSOS
+    - Próxima sessão agendada para: [data]
+    - Objetivo: Avaliação formal de matemática
+    - Duração prevista do processo de avaliação: 6-8 sessões
+    - Reunião com pais após conclusão da avaliação
+
+═══════════════════════════════════════════════════════════
+
+OBSERVAÇÕES ADICIONAIS:
+É fundamental que haja colaboração entre família, escola e profissional
+para o sucesso do processo. O prognóstico inicial é positivo, considerando
+o interesse da família e as capacidades preservadas do paciente.
+
+Este relatório é confidencial e destinado exclusivamente para fins
+clínicos e educacionais, respeitando o sigilo profissional.
+
+Assinatura: _______________________
+            [Seu Nome]
+            CRP/CRFa: [Número]`;
+
+        updateCounts();
+        
+        // Animar scroll até o textarea
+        textArea.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        
+        // Flash verde no textarea para feedback
+        textArea.style.transition = 'background-color 0.3s';
+        textArea.style.backgroundColor = '#d4edda';
+        setTimeout(() => {
+            textArea.style.backgroundColor = '';
+        }, 1000);
+    });
+    
+    // Prevenir perda de dados não salvos
+    let formModified = false;
+    let formSubmitted = false;
+    
+    textArea.addEventListener('input', function() {
+        if (textArea.value.length > 50) {
+            formModified = true;
+        }
+    });
+    
+    window.addEventListener('beforeunload', function(e) {
+        if (formModified && !formSubmitted && textArea.value.length > 100) {
+            e.preventDefault();
+            e.returnValue = 'Você tem alterações não salvas. Deseja realmente sair?';
+            return e.returnValue;
+        }
+    });
+    
+    // Feedback ao enviar
+    documentForm.addEventListener('submit', function() {
+        formSubmitted = true;
+        formModified = false;
+        submitBtn.disabled = true;
+        submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Processando...';
+    });
+    
+    // Reset do formulário
+    resetBtn.addEventListener('click', function() {
+        if (formModified && textArea.value.length > 100) {
+            if (!confirm('Tem certeza que deseja limpar todo o conteúdo?')) {
+                return false;
+            }
+        }
+        formModified = false;
+        updateCounts();
+    });
+    
+    // Atalhos de teclado
+    document.addEventListener('keydown', function(e) {
+        // Ctrl/Cmd + S para salvar
+        if ((e.ctrlKey || e.metaKey) && e.key === 's') {
+            e.preventDefault();
+            if (documentForm.checkValidity()) {
+                documentForm.submit();
+            } else {
+                documentForm.reportValidity();
+            }
+        }
+        
+        // Ctrl/Cmd + E para exemplo
+        if ((e.ctrlKey || e.metaKey) && e.key === 'e') {
+            e.preventDefault();
+            autoFillBtn.click();
+        }
+    });
+    
+    // Auto-save no localStorage (backup)
+    let autoSaveInterval;
+    function startAutoSave() {
+        autoSaveInterval = setInterval(() => {
+            if (textArea.value.length > 50) {
+                localStorage.setItem('document_draft', JSON.stringify({
+                    patient_id: document.getElementById('patient_id').value,
+                    title: document.getElementById('title').value,
+                    text: textArea.value,
+                    timestamp: new Date().toISOString()
+                }));
+            }
+        }, 30000); // A cada 30 segundos
+    }
+    
+    // Recuperar rascunho se existir
+    function checkForDraft() {
+        const draft = localStorage.getItem('document_draft');
+        if (draft) {
+            try {
+                const data = JSON.parse(draft);
+                const draftDate = new Date(data.timestamp);
+                const hoursSince = (Date.now() - draftDate.getTime()) / (1000 * 60 * 60);
+                
+                if (hoursSince < 24) { // Rascunho de menos de 24h
+                    if (confirm('Encontramos um rascunho salvo. Deseja recuperá-lo?')) {
+                        document.getElementById('patient_id').value = data.patient_id;
+                        document.getElementById('title').value = data.title;
+                        textArea.value = data.text;
+                        updateCounts();
+                        formModified = true;
+                    }
+                }
+            } catch (e) {
+                console.error('Erro ao recuperar rascunho:', e);
+            }
+        }
+    }
+    
+    // Inicializar
+    checkForDraft();
+    startAutoSave();
+    
+    // Limpar rascunho ao enviar com sucesso
+    documentForm.addEventListener('submit', function() {
+        localStorage.removeItem('document_draft');
+    });
+</script>
+{% endblock %}
+{% endblock %}

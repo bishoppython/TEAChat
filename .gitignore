@@ -1,58 +1,51 @@
-# Environment
-.env
-./env/
+# Python
 venv/
-.venv/
-env/*
+env/
+__pycache__/
+*.pyc
+*.pyo
 
-# Build artifacts
-.dist/
-.build/
-*.egg-info/
+# IA
+models/
+*.pt
+*.bin
+*.ckpt
 
-# OS files
-.DS_Store
-Thumbs.db
+# Banco
+*.db
 
-# IDE files
+# Node
+node_modules/
+package-lock.json
+
+# Ambiente — NUNCA commitar arquivos .env reais
+.env
+.env.aws
+.env.local
+.env.gcp
+# Manter apenas os .example (são templates seguros)
+
+# Segredos e chaves — NUNCA commitar
+gcp-sa-key.json
+*.json.key
+public-key-teachat
+
+# Instaladores e SDKs pesados
+awscliv2.zip
+awscliv2.sig
+google-cloud-sdk/
+pgvector/
+
+# Cache
+.cache/
+
+# Deploy
+aws-deploy/.env.aws
+aws-deploy/*.bak
+*.sarif
+
+# IDE
 .vscode/
 .idea/
 *.swp
 *.swo
-
-# Logs and temp files
-*.log
-*.tmp
-*.bak
-
-# Python cache
-__pycache__/*
-core/__pycache__/*
-utils/__pycache__/ *
-database/__pycache__/
-analysis/__pycache__/*
-frontFlask/__pycache__/*
-core/__pycache__/local_response_generator.cpython-311.pyc
-
-# Test files (development only)
-/testes/
-test_*.py
-demo_*.py
-
-# Development/fix scripts (not needed in production)
-check_*.py
-fix_*.py
-ensure_tables.py
-setup_db.py
-investigate_issue.py
-direct_schema_update.py
-update_*.py
-verify_schema.py
-recreate_documents_table.py
-create_patient.py
-
-# Old/experimental files
-frontend.py
-projeto_semi_funcional.zip
-/pgvector
-package-lock.json

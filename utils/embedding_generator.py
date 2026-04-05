@@ -1,7 +1,7 @@
 """
 Módulo de embeddings para sistema RAG de psicologia clínica
-Lida com geração e gerenciamento de embeddings usando Google Gemini com OpenAI como fallback,
-e embeddings locais como fallback final
+Lida com geração e gerenciamento de embeddings usando OpenAI como primário e Google Gemini como fallback.
+Fallback para modelos locais foi DESATIVADO conforme configuração.
 """
 import os
 import logging
@@ -19,13 +19,9 @@ from openai import OpenAI
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-# Tentar importar embeddings locais
-try:
-    from .local_embeddings import LocalEmbeddingGenerator
-    LOCAL_EMBEDDINGS_AVAILABLE = True
-except ImportError:
-    LOCAL_EMBEDDINGS_AVAILABLE = False
-    logger.warning("Embeddings locais não disponíveis")
+# Embeddings locais DESATIVADOS - usando apenas OpenAI e Gemini
+LOCAL_EMBEDDINGS_AVAILABLE = False
+logger.info("Embeddings locais DESATIVADOS - usando apenas OpenAI e Gemini como provedores")
 
 
 class MultiModelEmbeddingGenerator:
@@ -47,54 +43,46 @@ class MultiModelEmbeddingGenerator:
         self.google_api_key = google_api_key or os.getenv("GOOGLE_API_KEY")
         self.openai_api_key = openai_api_key or os.getenv("OPENAI_API_KEY")
 
-        # Inicializar Google Gemini se chave estiver disponível
-        self.use_google = False
-        if self.google_api_key:
-            try:
-                # For the new google-genai library, we might need to create a client
-                from google.genai import GenerativeModel, embedding
-                self.google_client = embedding
-                self.google_model_name = google_model_name
-                self.use_google = True
-                logger.info("Google GenAI API configured successfully")
-            except ImportError:
-                try:
-                    # Fallback to the old configuration method if the new API is different
-                    genai.configure(api_key=self.google_api_key)
-                    self.google_model_name = google_model_name
-                    self.use_google = True
-                    logger.info("Google GenAI API configured successfully")
-                except Exception as e:
-                    logger.warning(f"Could not configure Google GenAI API: {e}")
-            except Exception as e:
-                logger.warning(f"Could not configure Google GenAI API: {e}")
-
-        # Inicializar OpenAI se chave estiver disponível
+        # Inicializar OpenAI como provedor PRIMÁRIO
         self.use_openai = False
         if self.openai_api_key:
             try:
                 self.openai_client = OpenAI(api_key=self.openai_api_key)
                 self.openai_model_name = openai_model_name
                 self.use_openai = True
-                logger.info("API OpenAI configurada com sucesso")
+                logger.info("✅ API OpenAI configurada como provedor PRIMÁRIO")
             except Exception as e:
                 logger.warning(f"Não foi possível configurar API OpenAI: {e}")
 
+        # Inicializar Google Gemini como provedor de FALLBACK
+        self.use_google = False
+        if self.google_api_key:
+            try:
+                # Try the new google-genai API first
+                from google.genai import GenerativeModel, embedding
+                self.google_client = embedding
+                self.google_model_name = google_model_name
+                self.use_google = True
+                logger.info("✅ Google GenAI API configurada como provedor de FALLBACK")
+            except ImportError:
+                try:
+                    # Fallback to the old configuration method if the new API is different
+                    genai.configure(api_key=self.google_api_key)
+                    self.google_model_name = google_model_name
+                    self.use_google = True
+                    logger.info("✅ Google GenAI API configurada como provedor de FALLBACK")
+                except Exception as e:
+                    logger.warning(f"Could not configure Google GenAI API: {e}")
+            except Exception as e:
+                logger.warning(f"Could not configure Google GenAI API: {e}")
 
-        # Inicializar embeddings locais como fallback final
+        # Fallback local DESATIVADO conforme configuração
         self.local_generator = None
         self.use_local = False
-        if LOCAL_EMBEDDINGS_AVAILABLE:
-            try:
-                self.local_generator = LocalEmbeddingGenerator()
-                if self.local_generator.is_available():
-                    self.use_local = True
-                    logger.info("✅ Embeddings locais configurados como fallback")
-            except Exception as e:
-                logger.warning(f"Não foi possível configurar embeddings locais: {e}")
+        logger.info("⚠️  Fallback local DESATIVADO - apenas OpenAI e Gemini serão usados")
 
-        if not self.use_google and not self.use_openai and not self.use_local:
-            logger.warning("⚠️  Nenhum serviço de embedding disponível! O sistema usará busca de texto como fallback.")
+        if not self.use_openai and not self.use_google:
+            logger.error("⚠️  NENHUM provedor de embedding disponível! Configure OPENAI_API_KEY ou GOOGLE_API_KEY.")
 
         # Configurar pool de threads para geração concorrente de embeddings
         self.executor = ThreadPoolExecutor(max_workers=4)
@@ -105,13 +93,14 @@ class MultiModelEmbeddingGenerator:
 
     def generate_single_embedding(self, text: str, task_type: str = "RETRIEVAL_DOCUMENT") -> List[float]:
         """
-        Generate embedding for a single text using OpenAI as primary, with Google and local as fallbacks
+        Generate embedding for a single text using OpenAI as primary, with Google Gemini as fallback.
+        Local fallback is DISABLED.
 
         :param text: Input text to embed
         :param task_type: Type of task (RETRIEVAL_DOCUMENT, RETRIEVAL_QUERY, etc.)
         :return: Embedding as a list of floats
         """
-        # Try OpenAI first
+        # Try OpenAI first (PRIMARY provider)
         if self.use_openai:
             try:
                 response = self.openai_client.embeddings.create(
@@ -119,7 +108,7 @@ class MultiModelEmbeddingGenerator:
                     model=self.openai_model_name
                 )
                 embedding = response.data[0].embedding
-                logger.info(f"Embedding generated successfully with OpenAI. Dimensions: {len(embedding)}")
+                logger.info(f"Embedding generated successfully with OpenAI (PRIMARY). Dimensions: {len(embedding)}")
 
                 # Cache the dimensions and provider info
                 self.detected_dimensions['openai'] = len(embedding)
@@ -127,9 +116,9 @@ class MultiModelEmbeddingGenerator:
 
                 return embedding
             except Exception as e:
-                logger.warning(f"OpenAI failed to generate embedding: {str(e)}")
+                logger.warning(f"OpenAI (PRIMARY) failed to generate embedding: {str(e)}")
 
-        # If OpenAI failed or is not configured, try Google
+        # If OpenAI failed, try Google Gemini as FALLBACK
         if self.use_google:
             try:
                 # Try the new google-genai API first
@@ -151,8 +140,8 @@ class MultiModelEmbeddingGenerator:
                         task_type=gemini_task_type
                     )
                     embedding = result['embedding'][0]  # Assuming single embedding returned
-                
-                logger.info(f"Embedding generated successfully with Google GenAI. Dimensions: {len(embedding)}")
+
+                logger.info(f"Embedding generated successfully with Google Gemini (FALLBACK). Dimensions: {len(embedding)}")
 
                 # Cache the dimensions and provider info
                 self.detected_dimensions['google'] = len(embedding)
@@ -160,27 +149,11 @@ class MultiModelEmbeddingGenerator:
 
                 return embedding
             except Exception as e:
-                logger.error(f"Google GenAI failed to generate embedding: {str(e)}")
+                logger.error(f"Google Gemini (FALLBACK) failed to generate embedding: {str(e)}")
 
-        # If all primary options failed, try local embeddings as final fallback
-        if self.use_local:
-            try:
-                logger.info("🔄 Trying local embeddings as fallback...")
-                local_embedding = self.local_generator.generate_embedding(text)
-                if local_embedding is not None:
-                    logger.info(f"Embedding generated successfully with local model. Dimensions: {len(local_embedding)}")
-
-                    # Cache the dimensions and provider info
-                    self.detected_dimensions['local'] = len(local_embedding)
-                    self.provider_info['local'] = {'dimensions': len(local_embedding)}
-
-                    return local_embedding
-            except Exception as e:
-                logger.error(f"Local embeddings failed: {str(e)}")
-
-        # If all options failed, return a default embedding vector
-        logger.error("All embedding providers failed")
-        return self._get_default_embedding_vector()
+        # Local fallback is DISABLED - raise error if both providers fail
+        logger.error("❌ Ambos provedores (OpenAI e Google Gemini) falharam. Fallback local está DESATIVADO.")
+        raise RuntimeError("Todos os provedores de embedding falharam (OpenAI e Google Gemini). Fallback local está desativado.")
 
     def _get_default_embedding_vector(self) -> List[float]:
         """

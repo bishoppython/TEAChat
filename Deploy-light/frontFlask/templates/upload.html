@@ -1,0 +1,483 @@
+{% extends "base.html" %}
+
+{% block title %}Upload de Documento - TEAChat {% endblock %}
+
+{% block content %}
+<h2 class="mb-4"><i class="bi bi-cloud-upload"></i> Upload de Documento</h2>
+
+<div class="row">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-body">
+                <form method="POST" action="{{ url_for('upload') }}" enctype="multipart/form-data" id="uploadForm">
+                    <div class="mb-3">
+                        <label for="patient_id" class="form-label">Paciente <span class="text-danger">*</span></label>
+                        <select class="form-select patient-select" id="patient_id" name="patient_id" required>
+                            <option value="">Selecione um paciente...</option>
+                            {% for patient in patients %}
+                                <option value="{{ patient.id }}">{{ patient.name or (patient.first_name or '') + " " + (patient.last_name or '') }}</option>
+                            {% endfor %}
+                        </select>
+                        <div class="invalid-feedback">Por favor, selecione um paciente.</div>
+                        <small class="text-muted">Selecione o paciente para o qual este documento se refere</small>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="title" class="form-label">Título do Documento (opcional)</label>
+                        <input type="text" class="form-control" id="title" name="title"
+                               placeholder="Deixe em branco para usar o nome do arquivo">
+                        <small class="text-muted">Se não informado, será usado o nome do arquivo</small>
+                    </div>
+
+                    <div class="mb-4">
+                        <label for="file" class="form-label">Selecione o Arquivo <span class="text-danger">*</span></label>
+
+                        <!-- Área de drag and drop -->
+                        <div class="border border-2 border-dashed rounded p-5 text-center position-relative"
+                             id="dropZone"
+                             style="border-color: #dee2e6; background-color: #f8f9fa; cursor: pointer; transition: all 0.3s;">
+                            <input type="file" class="d-none" id="file" name="file"
+                                   accept=".pdf,.doc,.docx,.txt,.csv" required>
+                            <div id="dropZoneContent">
+                                <i class="bi bi-cloud-upload display-3 text-primary mb-3"></i>
+                                <h5 class="mb-2">Arraste o arquivo aqui</h5>
+                                <p class="text-muted mb-3">ou</p>
+                                <button type="button" class="btn btn-outline-primary" id="selectFileBtn">
+                                    <i class="bi bi-folder2-open"></i> Selecionar Arquivo
+                                </button>
+                                <p class="text-muted small mt-3 mb-0">
+                                    Formatos aceitos: PDF, DOC, DOCX, TXT, CSV<br>
+                                    Tamanho máximo: 10MB
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Preview do arquivo selecionado -->
+                    <div class="mb-3" id="filePreview" style="display: none;">
+                        <div class="alert alert-info border-start border-4 border-info">
+                            <div class="row align-items-center">
+                                <div class="col-auto">
+                                    <i class="bi bi-file-earmark-text display-4" id="fileIcon"></i>
+                                </div>
+                                <div class="col">
+                                    <h6 class="mb-1">Arquivo selecionado:</h6>
+                                    <p class="mb-1"><strong id="fileName"></strong></p>
+                                    <small class="text-muted">
+                                        <i class="bi bi-hdd"></i> <strong>Tamanho:</strong> <span id="fileSize"></span> |
+                                        <i class="bi bi-file-earmark"></i> <strong>Tipo:</strong> <span id="fileType"></span>
+                                    </small>
+                                </div>
+                                <div class="col-auto">
+                                    <button type="button" class="btn btn-sm btn-outline-danger" id="removeFile" title="Remover arquivo">
+                                        <i class="bi bi-x-lg"></i>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="d-flex gap-2 align-items-center">
+                        <button type="submit" class="btn btn-primary" id="submitBtn" disabled>
+                            <i class="bi bi-cloud-upload"></i> Fazer Upload
+                        </button>
+                        <button type="reset" class="btn btn-outline-secondary" id="resetBtn">
+                            <i class="bi bi-x-circle"></i> Cancelar
+                        </button>
+                        <small class="text-muted ms-auto">
+                            <i class="bi bi-info-circle"></i> O processamento pode levar alguns segundos
+                        </small>
+                    </div>
+
+                    <!-- Barra de progresso -->
+                    <div class="mt-4" id="uploadProgress" style="display: none;">
+                        <h6 class="mb-2">
+                            <i class="bi bi-hourglass-split"></i> Processando arquivo...
+                        </h6>
+                        <div class="progress">
+                            <div class="progress-bar progress-bar-striped progress-bar-animated"
+                                 role="progressbar" style="width: 0%" id="progressBar"></div>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-4">
+        <div class="card mb-3">
+            <div class="card-header">
+                <i class="bi bi-file-earmark-check"></i> Formatos Suportados
+            </div>
+            <div class="card-body">
+                <div class="mb-3 d-flex align-items-center">
+                    <i class="bi bi-file-earmark-pdf text-danger fs-3 me-3"></i>
+                    <div>
+                        <strong>PDF</strong>
+                        <p class="small text-muted mb-0">Documentos em formato PDF</p>
+                    </div>
+                </div>
+                <div class="mb-3 d-flex align-items-center">
+                    <i class="bi bi-file-earmark-word text-primary fs-3 me-3"></i>
+                    <div>
+                        <strong>DOC/DOCX</strong>
+                        <p class="small text-muted mb-0">Microsoft Word</p>
+                    </div>
+                </div>
+                <div class="mb-3 d-flex align-items-center">
+                    <i class="bi bi-file-earmark-text text-secondary fs-3 me-3"></i>
+                    <div>
+                        <strong>TXT</strong>
+                        <p class="small text-muted mb-0">Texto simples</p>
+                    </div>
+                </div>
+                <div class="d-flex align-items-center">
+                    <i class="bi bi-file-earmark-spreadsheet text-success fs-3 me-3"></i>
+                    <div>
+                        <strong>CSV</strong>
+                        <p class="small text-muted mb-0">Planilhas CSV</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="card mb-3">
+            <div class="card-header">
+                <i class="bi bi-shield-check"></i> Segurança
+            </div>
+            <div class="card-body">
+                <ul class="small mb-0">
+                    <li>Todos os uploads são criptografados</li>
+                    <li>Apenas você tem acesso aos seus documentos</li>
+                    <li>Dados armazenados com segurança</li>
+                    <li>Conformidade com LGPD</li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="card mb-3">
+            <div class="card-header">
+                <i class="bi bi-graph-up"></i> Exemplos de Uso
+            </div>
+            <div class="card-body">
+                <p class="small mb-2"><strong>Documentos ideais para upload:</strong></p>
+                <ul class="small mb-0">
+                    <li>Relatórios médicos em PDF</li>
+                    <li>Avaliações neuropsicológicas</li>
+                    <li>Laudos e pareceres</li>
+                    <li>Histórico escolar</li>
+                    <li>Anotações anteriores</li>
+                    <li>Materiais de referência</li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="card border-warning">
+            <div class="card-body bg-warning bg-opacity-10">
+                <h6 class="text-warning">
+                    <i class="bi bi-exclamation-triangle"></i> Atenção
+                </h6>
+                <p class="small mb-0">
+                    Certifique-se de que o arquivo não contém informações
+                    sensíveis que não devem ser processadas. Remova dados
+                    desnecessários antes do upload para melhor performance.
+                </p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    // Função para carregar todos os pacientes do usuário
+    async function loadPatients() {
+        try {
+            // Usar a rota proxy do Flask que já lida com autenticação
+            const response = await fetch(`/api/user/{{ session.user_id }}/patients`);
+
+            if (response.ok) {
+                const data = await response.json();
+                const patientSelect = document.getElementById('patient_id');
+
+                // Limpar opções anteriores
+                patientSelect.innerHTML = '';
+
+                const patients = data.statistics?.patients || [];
+
+                // Adicionar pacientes existentes
+                patients.forEach(patient => {
+                    // Converter o ID para número para garantir que é inteiro
+                    const patientId = parseInt(patient.id);
+                    if (!isNaN(patientId)) {
+                        const option = document.createElement('option');
+                        option.value = patientId;  // Usar o ID do paciente como número
+                        option.textContent = patient.name || `Paciente ${patientId}`;
+                        patientSelect.appendChild(option);
+                    }
+                });
+
+                // Se não houver pacientes, adicionar uma opção padrão
+                if (patients.length === 0) {
+                    const option = document.createElement('option');
+                    option.disabled = true;
+                    option.textContent = 'Nenhum paciente cadastrado';
+                    patientSelect.appendChild(option);
+                }
+
+                // Se havia um paciente pré-selecionado (pode vir de URL ou cache), tentar mantê-lo
+                // Por padrão, seleciona o primeiro paciente se existir
+                if (patients.length > 0) {
+                    const firstPatientId = parseInt(patients[0].id);
+                    if (!isNaN(firstPatientId)) {
+                        patientSelect.value = firstPatientId;  // Usar o ID do paciente como número
+                    }
+                }
+            } else {
+                console.error('Erro na resposta da API:', response.status);
+                // Exibir mensagem para o usuário
+                const patientSelect = document.getElementById('patient_id');
+                patientSelect.innerHTML = '<option value="">Erro ao carregar pacientes</option>';
+            }
+        } catch (error) {
+            console.error('Erro ao carregar pacientes:', error);
+            // Exibir mensagem para o usuário
+            const patientSelect = document.getElementById('patient_id');
+            patientSelect.innerHTML = '<option value="">Erro ao carregar pacientes</option>';
+        }
+    }
+
+    // Carregar pacientes quando o DOM estiver pronto
+    document.addEventListener('DOMContentLoaded', function() {
+        loadPatients();
+    });
+</script>
+
+{% block extra_js %}
+<script>
+    const fileInput = document.getElementById('file');
+    const filePreview = document.getElementById('filePreview');
+    const fileName = document.getElementById('fileName');
+    const fileSize = document.getElementById('fileSize');
+    const fileType = document.getElementById('fileType');
+    const fileIcon = document.getElementById('fileIcon');
+    const uploadForm = document.getElementById('uploadForm');
+    const submitBtn = document.getElementById('submitBtn');
+    const uploadProgress = document.getElementById('uploadProgress');
+    const resetBtn = document.getElementById('resetBtn');
+    const dropZone = document.getElementById('dropZone');
+    const dropZoneContent = document.getElementById('dropZoneContent');
+    const removeFile = document.getElementById('removeFile');
+    const titleInput = document.getElementById('title');
+    const selectFileBtn = document.getElementById('selectFileBtn');
+    
+    // Click no botão de selecionar arquivo
+    selectFileBtn.addEventListener('click', function(e) {
+        e.stopPropagation();
+        fileInput.click();
+    });
+    
+    // Click na zona de drop abre seletor de arquivo
+    dropZone.addEventListener('click', function(e) {
+        if (e.target !== removeFile && !removeFile.contains(e.target)) {
+            fileInput.click();
+        }
+    });
+    
+    // Prevenir comportamento padrão de drag and drop
+    ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+        dropZone.addEventListener(eventName, preventDefaults, false);
+        document.body.addEventListener(eventName, preventDefaults, false);
+    });
+    
+    function preventDefaults(e) {
+        e.preventDefault();
+        e.stopPropagation();
+    }
+    
+    // Highlight na zona de drop
+    ['dragenter', 'dragover'].forEach(eventName => {
+        dropZone.addEventListener(eventName, highlight, false);
+    });
+    
+    ['dragleave', 'drop'].forEach(eventName => {
+        dropZone.addEventListener(eventName, unhighlight, false);
+    });
+    
+    function highlight() {
+        dropZone.style.borderColor = '#0d6efd';
+        dropZone.style.backgroundColor = '#e7f1ff';
+        dropZone.style.transform = 'scale(1.02)';
+    }
+    
+    function unhighlight() {
+        dropZone.style.borderColor = '#dee2e6';
+        dropZone.style.backgroundColor = '#f8f9fa';
+        dropZone.style.transform = 'scale(1)';
+    }
+    
+    // Handle drop
+    dropZone.addEventListener('drop', handleDrop, false);
+    
+    function handleDrop(e) {
+        const dt = e.dataTransfer;
+        const files = dt.files;
+        
+        if (files.length > 0) {
+            fileInput.files = files;
+            handleFiles(files);
+        }
+    }
+    
+    // Preview do arquivo selecionado
+    fileInput.addEventListener('change', function() {
+        if (this.files && this.files[0]) {
+            handleFiles(this.files);
+        }
+    });
+    
+    function handleFiles(files) {
+        const file = files[0];
+        
+        // Validar tamanho (10MB)
+        if (file.size > 10 * 1024 * 1024) {
+            alert('❌ O arquivo é muito grande!\n\nTamanho máximo permitido: 10MB\nTamanho do arquivo: ' + 
+                  (file.size / (1024 * 1024)).toFixed(2) + 'MB');
+            fileInput.value = '';
+            return;
+        }
+        
+        // Validar tipo
+        const validTypes = ['.pdf', '.doc', '.docx', '.txt', '.csv'];
+        const fileExt = '.' + file.name.split('.').pop().toLowerCase();
+        if (!validTypes.includes(fileExt)) {
+            alert('❌ Formato de arquivo não suportado!\n\nFormatos aceitos: PDF, DOC, DOCX, TXT, CSV\n' +
+                  'Arquivo selecionado: ' + fileExt);
+            fileInput.value = '';
+            return;
+        }
+        
+        // Atualizar ícone baseado no tipo
+        updateFileIcon(fileExt);
+        
+        // Mostrar preview
+        fileName.textContent = file.name;
+        
+        // Formatar tamanho do arquivo
+        const size = file.size;
+        let sizeStr;
+        if (size < 1024) {
+            sizeStr = size + ' bytes';
+        } else if (size < 1024 * 1024) {
+            sizeStr = (size / 1024).toFixed(2) + ' KB';
+        } else {
+            sizeStr = (size / (1024 * 1024)).toFixed(2) + ' MB';
+        }
+        fileSize.textContent = sizeStr;
+        
+        // Tipo MIME
+        fileType.textContent = file.type || 'application/octet-stream';
+        
+        // Auto-preencher título se estiver vazio
+        if (!titleInput.value) {
+            const nameWithoutExt = file.name.substring(0, file.name.lastIndexOf('.'));
+            titleInput.value = nameWithoutExt;
+        }
+        
+        // Animação de transição
+        dropZone.style.transition = 'all 0.3s';
+        dropZone.style.opacity = '0';
+        
+        setTimeout(() => {
+            dropZone.style.display = 'none';
+            filePreview.style.display = 'block';
+            submitBtn.disabled = false;
+            
+            // Animar entrada do preview
+            filePreview.style.opacity = '0';
+            setTimeout(() => {
+                filePreview.style.transition = 'opacity 0.3s';
+                filePreview.style.opacity = '1';
+            }, 10);
+        }, 300);
+    }
+    
+    function updateFileIcon(ext) {
+        fileIcon.className = 'bi display-4';
+        
+        switch(ext) {
+            case '.pdf':
+                fileIcon.classList.add('bi-file-earmark-pdf', 'text-danger');
+                break;
+            case '.doc':
+            case '.docx':
+                fileIcon.classList.add('bi-file-earmark-word', 'text-primary');
+                break;
+            case '.txt':
+                fileIcon.classList.add('bi-file-earmark-text', 'text-secondary');
+                break;
+            case '.csv':
+                fileIcon.classList.add('bi-file-earmark-spreadsheet', 'text-success');
+                break;
+            default:
+                fileIcon.classList.add('bi-file-earmark', 'text-muted');
+        }
+    }
+    
+    // Remover arquivo
+    removeFile.addEventListener('click', function(e) {
+        e.stopPropagation();
+        fileInput.value = '';
+        
+        // Animação de saída
+        filePreview.style.opacity = '0';
+        
+        setTimeout(() => {
+            filePreview.style.display = 'none';
+            dropZone.style.display = 'block';
+            dropZone.style.opacity = '0';
+            submitBtn.disabled = true;
+            
+            setTimeout(() => {
+                dropZone.style.opacity = '1';
+            }, 10);
+        }, 300);
+    });
+    
+    // Mostrar progresso durante upload
+    uploadForm.addEventListener('submit', function(e) {
+        if (!fileInput.files || !fileInput.files[0]) {
+            e.preventDefault();
+            alert('Por favor, selecione um arquivo!');
+            return;
+        }
+        
+        submitBtn.disabled = true;
+        resetBtn.disabled = true;
+        submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Enviando...';
+        uploadProgress.style.display = 'block';
+        
+        // Scroll até o progresso
+        uploadProgress.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    });
+    
+    // Reset do formulário
+    resetBtn.addEventListener('click', function() {
+        fileInput.value = '';
+        filePreview.style.display = 'none';
+        dropZone.style.display = 'block';
+        uploadProgress.style.display = 'none';
+        submitBtn.disabled = true;
+        submitBtn.innerHTML = '<i class="bi bi-cloud-upload"></i> Fazer Upload';
+        resetBtn.disabled = false;
+    });
+    
+    // Animação inicial
+    window.addEventListener('load', function() {
+        dropZone.style.opacity = '0';
+        setTimeout(() => {
+            dropZone.style.transition = 'all 0.5s';
+            dropZone.style.opacity = '1';
+        }, 100);
+    });
+</script>
+{% endblock %}
+{% endblock %}

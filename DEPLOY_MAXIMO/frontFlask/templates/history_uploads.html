@@ -1,0 +1,271 @@
+{% extends "base.html" %}
+
+{% block title %}Histórico de Uploads - TEAChat{% endblock %}
+
+{% block extra_css %}
+<style>
+    .upload-card {
+        transition: all 0.3s;
+        border-left: 4px solid var(--success-color);
+    }
+
+    .upload-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 8px rgba(0,0,0,0.12);
+    }
+
+    .history-filters {
+        background: white;
+        padding: 1.5rem;
+        border-radius: 10px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.08);
+        margin-bottom: 1.5rem;
+    }
+
+    .upload-date {
+        font-size: 0.875rem;
+        color: var(--secondary-color);
+    }
+
+    .file-icon {
+        font-size: 2rem;
+    }
+
+    .file-size {
+        font-size: 0.875rem;
+        color: var(--secondary-color);
+    }
+
+    .status-badge {
+        text-transform: uppercase;
+        font-size: 0.75rem;
+    }
+    
+    .action-buttons {
+        margin-top: 15px;
+        padding-top: 15px;
+        border-top: 1px solid #eee;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2><i class="bi bi-cloud-upload"></i> Histórico de Uploads</h2>
+    <a href="{{ url_for('history') }}" class="btn btn-outline-secondary">
+        <i class="bi bi-arrow-left"></i> Voltar
+    </a>
+</div>
+
+<!-- Filtros -->
+<div class="history-filters">
+    <form method="GET" class="row g-3">
+        <div class="col-md-3">
+            <label for="patient_id" class="form-label">Paciente</label>
+            <select class="form-select patient-select" id="patient_id" name="patient_id">
+                <option value="">Todos os pacientes</option>
+                {% for patient in patients %}
+                    <option value="{{ patient.id }}" {% if request.args.get('patient_id') == patient.id|string %}selected{% endif %}>
+                        {{ patient.name or patient.first_name + " " + patient.last_name }}
+                    </option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="col-md-3">
+            <label for="status" class="form-label">Status</label>
+            <select class="form-select" id="status" name="status">
+                <option value="active" {% if request.args.get('status', 'active') == 'active' %}selected{% endif %}>Ativo</option>
+                <option value="deleted" {% if request.args.get('status', 'active') == 'deleted' %}selected{% endif %}>Excluído</option>
+                <option value="" {% if request.args.get('status', 'active') == '' %}selected{% endif %}>Todos</option>
+            </select>
+        </div>
+        <div class="col-md-2">
+            <label for="limit" class="form-label">Resultados por página</label>
+            <select class="form-select" id="limit" name="limit">
+                <option value="10" {% if request.args.get('limit', '10') == '10' %}selected{% endif %}>10</option>
+                <option value="25" {% if request.args.get('limit', '10') == '25' %}selected{% endif %}>25</option>
+                <option value="50" {% if request.args.get('limit', '10') == '50' %}selected{% endif %}>50</option>
+            </select>
+        </div>
+        <div class="col-md-2">
+            <label for="offset" class="form-label">Página</label>
+            <input type="number" class="form-control" id="offset" name="offset"
+                   value="{{ request.args.get('offset', '0') }}" min="0">
+        </div>
+        <div class="col-md-2 d-flex align-items-end">
+            <button type="submit" class="btn btn-primary w-100">
+                <i class="bi bi-funnel"></i> Filtrar
+            </button>
+        </div>
+    </form>
+</div>
+
+<!-- Lista de uploads -->
+{% if uploads and uploads|length > 0 %}
+<div class="row">
+    {% for upload in uploads %}
+    <div class="col-md-6 col-lg-4 mb-4">
+        <div class="card upload-card h-100">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-start mb-2">
+                    <span class="badge bg-{% if upload.status == 'active' %}success{% else %}danger{% endif %} status-badge">
+                        {{ upload.status }}
+                    </span>
+                    <span class="upload-date">{{ upload.upload_date[:16] if upload.upload_date else "N/A" }}</span>
+                </div>
+
+                <div class="text-center mb-3">
+                    {% if upload.file_type.startswith('image') %}
+                        <i class="bi bi-file-image file-icon text-primary"></i>
+                    {% elif upload.file_type.startswith('application/pdf') %}
+                        <i class="bi bi-file-pdf file-icon text-danger"></i>
+                    {% elif upload.file_type.startswith('application/msword') or upload.file_type.startswith('application/vnd.openxmlformats-officedocument.wordprocessingml.document') %}
+                        <i class="bi bi-file-word file-icon text-primary"></i>
+                    {% elif upload.file_type.startswith('text') %}
+                        <i class="bi bi-file-text file-icon text-secondary"></i>
+                    {% else %}
+                        <i class="bi bi-file-earmark file-icon text-muted"></i>
+                    {% endif %}
+                </div>
+
+                <h6 class="card-title">{{ upload.title or upload.original_filename }}</h6>
+
+                <p class="card-text small mb-1">
+                    <strong>Arquivo:</strong> {{ upload.original_filename }}
+                </p>
+
+                <p class="card-text small file-size mb-2">
+                    <i class="bi bi-hdd"></i> {{ upload.file_size|filesizeformat }}
+                </p>
+
+                <p class="card-text small">
+                    <strong>Tipo:</strong> {{ upload.file_type }}
+                </p>
+
+                <div class="action-buttons">
+                    {% if upload.status == 'active' %}
+                        <button class="btn btn-sm btn-outline-warning me-2" 
+                                onclick="editUpload({{ upload.id }}, '{{ upload.title or upload.original_filename|replace("'", "\\'") }}')">
+                            <i class="bi bi-pencil"></i> Editar
+                        </button>
+                        <button class="btn btn-sm btn-outline-danger" 
+                                onclick="deleteUpload({{ upload.id }}, '{{ upload.original_filename|replace("'", "\\'") }}')">
+                            <i class="bi bi-trash"></i> Excluir
+                        </button>
+                    {% else %}
+                        <span class="text-muted">
+                            <i class="bi bi-trash"></i> Arquivo excluído
+                        </span>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+
+<!-- Paginação -->
+{% if total > limit %}
+<div class="d-flex justify-content-center mt-4">
+    <nav>
+        <ul class="pagination">
+            {% set current_offset = request.args.get('offset', '0')|int %}
+            {% set current_limit = request.args.get('limit', '10')|int %}
+
+            {% if current_offset > 0 %}
+                <li class="page-item">
+                    <a class="page-link" href="{{ url_for('history_uploads', patient_id=request.args.get('patient_id'), status=request.args.get('status'), limit=current_limit, offset=max(0, current_offset - current_limit)) }}">Anterior</a>
+                </li>
+            {% endif %}
+
+            {% set page_count = (total / current_limit)|round(0, 'ceil')|int %}
+            {% for page in range(max(1, (current_offset // current_limit) - 2), min(page_count + 1, (current_offset // current_limit) + 4)) %}
+                {% set page_offset = (page - 1) * current_limit %}
+                <li class="page-item {% if page_offset == current_offset %}active{% endif %}">
+                    <a class="page-link" href="{{ url_for('history_uploads', patient_id=request.args.get('patient_id'), status=request.args.get('status'), limit=current_limit, offset=page_offset) }}">{{ page }}</a>
+                </li>
+            {% endfor %}
+
+            {% if current_offset + current_limit < total %}
+                <li class="page-item">
+                    <a class="page-link" href="{{ url_for('history_uploads', patient_id=request.args.get('patient_id'), status=request.args.get('status'), limit=current_limit, offset=current_offset + current_limit) }}">Próxima</a>
+                </li>
+            {% endif %}
+        </ul>
+    </nav>
+</div>
+{% endif %}
+
+{% else %}
+<div class="alert alert-info">
+    <i class="bi bi-cloud-upload"></i> Nenhum upload registrado.
+</div>
+{% endif %}
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // Atualizar a lista de pacientes quando a página carregar
+    document.addEventListener('DOMContentLoaded', function() {
+        updatePatientList();
+    });
+
+    async function deleteUpload(uploadId, filename) {
+        const confirmed = confirm(`Tem certeza que deseja excluir o arquivo "${filename}"? Esta ação não pode ser desfeita.`);
+
+        if (confirmed) {
+            try {
+                const response = await fetch(`/api/history/uploads/${uploadId}`, {
+                    method: 'DELETE',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
+                });
+
+                if (response.ok) {
+                    // Recarregar a página para atualizar a lista
+                    location.reload();
+                } else {
+                    const error = await response.json();
+                    alert(`Erro ao excluir upload: ${error.message || 'Erro desconhecido'}`);
+                }
+            } catch (error) {
+                console.error('Erro ao excluir upload:', error);
+                alert('Erro de conexão ao tentar excluir o upload.');
+            }
+        }
+    }
+    
+    function editUpload(uploadId, title) {
+        // Solicitar novo título ao usuário
+        const newTitle = prompt('Editar título do upload:', title);
+        if (newTitle !== null) {
+            updateUpload(uploadId, newTitle);
+        }
+    }
+    
+    async function updateUpload(uploadId, newTitle) {
+        try {
+            const formData = new FormData();
+            formData.append('title', newTitle);
+            
+            const response = await fetch(`/api/history/uploads/${uploadId}`, {
+                method: 'PUT',
+                body: formData
+            });
+
+            if (response.ok) {
+                // Recarregar a página para atualizar a lista
+                location.reload();
+            } else {
+                const error = await response.json();
+                alert(`Erro ao atualizar upload: ${error.message || 'Erro desconhecido'}`);
+            }
+        } catch (error) {
+            console.error('Erro ao atualizar upload:', error);
+            alert('Erro de conexão ao tentar atualizar o upload.');
+        }
+    }
+</script>
+{% endblock %}

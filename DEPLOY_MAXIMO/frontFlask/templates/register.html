@@ -1,0 +1,157 @@
+{% extends "base.html" %}
+
+{% block title %}Registrar - TEAChat{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center mt-5">
+    <div class="col-md-6">
+        <div class="card shadow-lg">
+            <div class="card-header text-center">
+                <h4 class="mb-0"><i class="bi bi-person-plus"></i> Criar Nova Conta</h4>
+            </div>
+            <div class="card-body p-4">
+                <form method="POST" action="{{ url_for('register') }}" id="registerForm">
+                    <div class="mb-3">
+                        <label for="username" class="form-label">Nome de usuário <span class="text-danger">*</span></label>
+                        <div class="input-group">
+                            <span class="input-group-text"><i class="bi bi-person"></i></span>
+                            <input type="text" class="form-control" id="username" name="username" required autofocus>
+                        </div>
+                        <small class="text-muted">Este será seu nome de login no sistema</small>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="full_name" class="form-label">Nome completo <span class="text-danger">*</span></label>
+                        <div class="input-group">
+                            <span class="input-group-text"><i class="bi bi-card-text"></i></span>
+                            <input type="text" class="form-control" id="full_name" name="full_name" required>
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="email" class="form-label">Email <span class="text-danger">*</span></label>
+                        <div class="input-group">
+                            <span class="input-group-text"><i class="bi bi-envelope"></i></span>
+                            <input type="email" class="form-control" id="email" name="email" required>
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="role" class="form-label">Tipo de Profissional <span class="text-danger">*</span></label>
+                        <select class="form-select" id="role" name="role" required>
+                            <option value="">Selecione sua profissão</option>
+                            <option value="therapist">Terapeuta</option>
+                            <option value="psychologist">Psicólogo(a)</option>
+                            <option value="psychopedagogue">Psicopedagogo(a)</option>
+                            <option value="teacher">Professor(a)</option>
+                            <option value="occupational_therapist">Terapeuta Ocupacional</option>
+                            <option value="musician">Musicista</option>
+                            <option value="psychiatrist">Psiquiatra</option>
+                            <option value="companion">Acompanhante/Assistente</option>
+                            <option value="speech_therapist">Fonoaudiólogo(a)</option>
+                        </select>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="password" class="form-label">Senha <span class="text-danger">*</span></label>
+                        <div class="input-group">
+                            <span class="input-group-text"><i class="bi bi-lock"></i></span>
+                            <input type="password" class="form-control" id="password" name="password" required minlength="6">
+                            <button class="btn btn-outline-secondary" type="button" id="togglePassword">
+                                <i class="bi bi-eye" id="toggleIcon"></i>
+                            </button>
+                        </div>
+                        <small class="text-muted">Mínimo de 6 caracteres</small>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="confirm_password" class="form-label">Confirmar senha <span class="text-danger">*</span></label>
+                        <div class="input-group">
+                            <span class="input-group-text"><i class="bi bi-lock-fill"></i></span>
+                            <input type="password" class="form-control" id="confirm_password" name="confirm_password" required minlength="6">
+                        </div>
+                        <div id="passwordMatchMessage" class="mt-1"></div>
+                    </div>
+                    
+                    <button type="submit" class="btn btn-primary w-100 mt-3" id="submitBtn">
+                        <i class="bi bi-check-circle"></i> Registrar
+                    </button>
+                </form>
+                
+                <hr class="my-4">
+                
+                <div class="text-center">
+                    <p class="text-muted mb-2">Já tem uma conta?</p>
+                    <a href="{{ url_for('login') }}" class="btn btn-outline-primary">
+                        <i class="bi bi-box-arrow-in-right"></i> Fazer Login
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% block extra_js %}
+<script>
+    const form = document.getElementById('registerForm');
+    const password = document.getElementById('password');
+    const confirmPassword = document.getElementById('confirm_password');
+    const passwordMatchMessage = document.getElementById('passwordMatchMessage');
+    const submitBtn = document.getElementById('submitBtn');
+    const togglePassword = document.getElementById('togglePassword');
+    const toggleIcon = document.getElementById('toggleIcon');
+    
+    // Toggle mostrar/ocultar senha
+    togglePassword.addEventListener('click', function() {
+        const type = password.getAttribute('type') === 'password' ? 'text' : 'password';
+        password.setAttribute('type', type);
+        
+        if (type === 'password') {
+            toggleIcon.classList.remove('bi-eye-slash');
+            toggleIcon.classList.add('bi-eye');
+        } else {
+            toggleIcon.classList.remove('bi-eye');
+            toggleIcon.classList.add('bi-eye-slash');
+        }
+    });
+    
+    // Validar se as senhas coincidem em tempo real
+    function checkPasswordMatch() {
+        if (confirmPassword.value === '') {
+            passwordMatchMessage.innerHTML = '';
+            submitBtn.disabled = false;
+            return;
+        }
+        
+        if (password.value === confirmPassword.value) {
+            passwordMatchMessage.innerHTML = '<small class="text-success"><i class="bi bi-check-circle"></i> As senhas coincidem</small>';
+            submitBtn.disabled = false;
+        } else {
+            passwordMatchMessage.innerHTML = '<small class="text-danger"><i class="bi bi-x-circle"></i> As senhas não coincidem</small>';
+            submitBtn.disabled = true;
+        }
+    }
+    
+    password.addEventListener('input', checkPasswordMatch);
+    confirmPassword.addEventListener('input', checkPasswordMatch);
+    
+    // Validar no submit
+    form.addEventListener('submit', function(e) {
+        if (password.value !== confirmPassword.value) {
+            e.preventDefault();
+            alert('As senhas não coincidem!');
+            return false;
+        }
+        
+        if (password.value.length < 6) {
+            e.preventDefault();
+            alert('A senha deve ter no mínimo 6 caracteres!');
+            return false;
+        }
+        
+        submitBtn.disabled = true;
+        submitBtn.innerHTML = '<i class="bi bi-hourglass-split"></i> Registrando...';
+    });
+</script>
+{% endblock %}
+{% endblock %}

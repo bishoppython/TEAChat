@@ -1,0 +1,125 @@
+================================================================================
+                    RESUMO DAS ALTERAÇÕES - FALBACK LOCAL DESATIVADO
+================================================================================
+
+DATA: 13 de Março de 2026
+VERSÃO: 2.0.0 - Somente APIs (OpenAI + Gemini)
+
+================================================================================
+🎯 OBJETIVO DA ALTERAÇÃO
+================================================================================
+
+Configurar o sistema para usar SEMPRE Gemini ou OpenAI como provedor principal,
+DESATIVANDO completamente o fallback para modelos locais.
+
+================================================================================
+📝 ARQUIVOS MODIFICADOS
+================================================================================
+
+1. utils/embedding_generator.py
+   - OpenAI definido como provedor PRIMÁRIO para embeddings
+   - Google Gemini definido como provedor de FALLBACK
+   - Embeddings locais REMOVIDOS
+   - Sistema agora lança erro se ambos provedores falharem
+
+2. core/clinical_ai_system.py
+   - LocalResponseGenerator DESATIVADO (None)
+   - Sistema lança erro se APIs falharem (sem fallback local)
+   - Logs atualizados para refletir nova configuração
+
+3. core/model_selector.py
+   - Documentação atualizada (apenas Gemini/OpenAI)
+   - Fallback local REMOVIDO
+   - Mensagens de erro atualizadas
+
+4. .env.example
+   - Configurações Ollama REMOVIDAS
+   - OpenAI marcada como PROVEDOR PRIMÁRIO
+   - Google Gemini marcado como PROVEDOR DE FALLBACK
+   - SECRET_KEY adicionada
+   - Notas explicativas incluídas
+
+================================================================================
+🔄 FLUXO ATUAL DE FUNCIONAMENTO
+================================================================================
+
+EMBEDDINGS:
+  OpenAI (Primário) → Google Gemini (Fallback) → ERRO
+
+GERAÇÃO DE RESPOSTAS:
+  Gemini/OpenAI (Melhor) → OpenAI/Gemini (Fallback) → ERRO
+
+================================================================================
+✅ ARQUIVOS ATUALIZADOS NA PASTA DEPLOY_MAXIMO
+================================================================================
+
+Todos os arquivos modificados foram copiados para:
+  DEPLOY_MAXIMO/
+  ├── utils/embedding_generator.py (atualizado)
+  ├── core/clinical_ai_system.py (atualizado)
+  ├── core/model_selector.py (atualizado)
+  ├── .env.example (atualizado)
+  └── CHANGELOG_FALLBACK_LOCAL_DESATIVADO.md (novo)
+  └── README_DEPLOY_MAXIMO.md (atualizado)
+
+================================================================================
+⚠️ IMPACTOS
+================================================================================
+
+VANTAGENS:
+  ✅ Maior consistência nas respostas
+  ✅ Menor complexidade de infraestrutura
+  ✅ Melhor qualidade (modelos de ponta)
+  ✅ Manutenção simplificada
+
+ATENÇÃO:
+  ⚠️ Requer conexão com internet
+  ⚠️ Depende de APIs externas
+  ⚠️ Custos de API devem ser monitorados
+  ⚠️ Sem funcionamento offline
+
+================================================================================
+🔑 CONFIGURAÇÃO NECESSÁRIA (.env)
+================================================================================
+
+# OpenAI API Key (PROVEDOR PRIMÁRIO)
+OPENAI_API_KEY=sk-...
+
+# Google Gemini API Key (FALLBACK)
+GOOGLE_API_KEY=...
+
+# Database URL
+DATABASE_URL=postgresql://...
+
+# Secret Key
+SECRET_KEY=sua_chave_secreta
+
+================================================================================
+🚨 MENSAGENS DE ERRO (quando APIs falham)
+================================================================================
+
+"Todos os provedores de embedding falharam (OpenAI e Google Gemini). 
+Fallback local está desativado."
+
+"Falha ao gerar resposta: APIs Gemini/OpenAI indisponíveis. 
+Fallback local desativado."
+
+================================================================================
+📋 TESTES RECOMENDADOS
+================================================================================
+
+  1. ✅ Geração de embeddings com OpenAI
+  2. ✅ Geração de embeddings com Google Gemini (fallback)
+  3. ✅ Geração de respostas com Gemini
+  4. ✅ Geração de respostas com OpenAI (fallback)
+  5. ✅ Comportamento quando ambas APIs falham (deve lançar erro)
+
+================================================================================
+📚 DOCUMENTAÇÃO ADICIONAL
+================================================================================
+
+Consulte na pasta DEPLOY_MAXIMO:
+  - CHANGELOG_FALLBACK_LOCAL_DESATIVADO.md (detalhes completos)
+  - README_DEPLOY_MAXIMO.md (guia de deploy atualizado)
+
+================================================================================

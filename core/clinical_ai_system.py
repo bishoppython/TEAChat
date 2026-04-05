@@ -72,16 +72,16 @@ class ClinicalAISystem:
             logger.warning(f"Interface OpenAI não disponível: {e}")
             self.openai_interface = None
 
-        # Inicializar o seletor de modelos com fallback automático
+        # Inicializar o seletor de modelos com fallback automático (apenas Gemini/OpenAI)
         self.model_selector = ModelSelector(
             gemini_interface=self.gemini_interface,
             openai_interface=self.openai_interface
         )
-        logger.info("✅ Seletor de modelos com fallback automático inicializado")
+        logger.info("✅ Seletor de modelos com fallback automático inicializado (apenas Gemini/OpenAI)")
 
-        # Inicializar Gerador de Resposta Local (fallback quando APIs falham)
-        self.local_generator = LocalResponseGenerator()
-        logger.info("✅ Gerador de Resposta Local inicializado (fallback)")
+        # Gerador de Resposta Local DESATIVADO - usando apenas APIs Gemini/OpenAI
+        self.local_generator = None
+        logger.info("⚠️  Gerador de Resposta Local DESATIVADO - apenas Gemini/OpenAI serão usados")
 
         # Inicializar detector de alertas inteligentes
         self.alert_detector = SmartAlertDetector()
@@ -229,22 +229,19 @@ class ClinicalAISystem:
             # Enriquecer o contexto RAG com informações gerais do usuário
             rag_result['context'] = f"{user_context}\n\n{rag_result['context']}"
 
-        # Gerar resposta usando o seletor de modelos com fallback automático
+        # Gerar resposta usando o seletor de modelos com fallback automático (apenas Gemini/OpenAI)
         if use_openai and (self.gemini_interface or self.openai_interface):  # use_openai agora significa "usar IA"
             try:
                 response, model_used = self.model_selector.generate_response(rag_result, fallback_enabled=True)
                 logger.info(f"✅ Resposta gerada com {model_used}")
             except Exception as e:
-                logger.warning(f"Modelos de IA falharam ({str(e)[:50]}...), usando gerador local")
-                # Fallback para gerador local (não usa LLM)
-                response = self.local_generator.generate_response_from_rag(rag_result)
-                model_used = "RAG-only"
-                logger.info("✅ Resposta gerada localmente (sem API)")
+                # Fallback local DESATIVADO - lançar erro quando APIs falham
+                logger.error(f"❌ Modelos de IA falharam ({str(e)[:100]}...). Fallback local está DESATIVADO.")
+                raise RuntimeError(f"Falha ao gerar resposta: APIs Gemini/OpenAI indisponíveis. Fallback local desativado.")
         else:
-            # Resposta fallback quando modelos de IA não estão disponíveis
-            logger.info("Modelos de IA não disponíveis, usando gerador local")
-            response = self.local_generator.generate_response_from_rag(rag_result)
-            model_used = "RAG-only"
+            # Erro quando modelos de IA não estão disponíveis
+            logger.error("❌ Modelos de IA não disponíveis. Fallback local está DESATIVADO.")
+            raise RuntimeError("Modelos de IA não disponíveis. Configure Gemini ou OpenAI. Fallback local desativado.")
 
         # Calcular tempo de resposta
         response_time = (datetime.now() - start_time).total_seconds() * 1000  # em ms

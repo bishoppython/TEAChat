@@ -1,0 +1,85 @@
+# =============================================================================
+# Dockerfile otimizado para Google Cloud Run
+# TEAChat / SYMYAH — Sistema de IA para Psicologia Clínica
+#
+# Diferenças do Dockerfile local:
+#   - Porta 8080 (padrão Cloud Run)
+#   - 1 worker (Cloud Run gerencia escala horizontalmente)
+#   - Multi-stage build para imagem menor
+#   - Sem volumes locais (Cloud Run é stateless)
+# =============================================================================
+
+# --- Stage 1: Build das dependências ---
+FROM python:3.11-slim AS builder
+
+WORKDIR /build
+
+# Instalar dependências de sistema para compilação
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    build-essential \
+    && rm -rf /var/lib/apt/lists/*
+
+# Criar ambiente virtual isolado
+RUN python -m venv /opt/venv
+ENV PATH="/opt/venv/bin:$PATH"
+
+# Copiar e instalar dependências Python
+COPY requirements.txt .
+RUN pip install --no-cache-dir --upgrade pip && \
+    pip install --no-cache-dir -r requirements.txt
+
+# Baixar dados NLTK no stage de build
+RUN python -m nltk.downloader -d /opt/nltk_data punkt punkt_tab
+
+# --- Stage 2: Imagem de produção mínima ---
+FROM python:3.11-slim AS production
+
+WORKDIR /app
+
+# Instalar apenas bibliotecas de runtime
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    libpq5 \
+    libgomp1 \
+    && rm -rf /var/lib/apt/lists/* \
+    && apt-get clean
+
+# Copiar ambiente virtual e dados NLTK do stage builder
+COPY --from=builder /opt/venv /opt/venv
+COPY --from=builder /opt/nltk_data /opt/nltk_data
+ENV PATH="/opt/venv/bin:$PATH"
+
+# Criar usuário não-root para segurança
+RUN groupadd -r symyah && useradd -r -g symyah symyah
+
+# Copiar código fonte da aplicação
+# Paths relativos ao contexto de build (raiz do projeto)
+COPY app.py .
+COPY anonimizer_functions.py .
+COPY core/ core/
+COPY database/ database/
+COPY utils/ utils/
+COPY analysis/ analysis/
+COPY frontFlask/ frontFlask/
+
+# Configurar permissões
+RUN chown -R symyah:symyah /app
+
+USER symyah
+
+# Variáveis de ambiente
+ENV PYTHONUNBUFFERED=1 \
+    PYTHONDONTWRITEBYTECODE=1 \
+    PIP_NO_CACHE_DIR=1 \
+    NLTK_DATA=/opt/nltk_data \
+    # Cloud Run usa porta 8080 por padrão
+    PORT=8080
+
+# Cloud Run injeta $PORT dinamicamente — o CMD deve respeitá-lo
+EXPOSE 8080
+
+# Health check compatível com Cloud Run
+HEALTHCHECK --interval=30s --timeout=10s --start-period=30s --retries=3 \
+    CMD python -c "import urllib.request; urllib.request.urlopen('http://localhost:8080/health')" || exit 1
+
+# 1 worker: Cloud Run escala horizontalmente com múltiplos containers
+CMD ["sh", "-c", "uvicorn app:app --host 0.0.0.0 --port ${PORT:-8080} --workers 1 --log-level info"]

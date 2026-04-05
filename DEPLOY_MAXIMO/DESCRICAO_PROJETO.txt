@@ -1,0 +1,149 @@
+================================================================================
+                    SISTEMA DE IA PARA PSICOLOGIA CLÍNICA (SYMYAH)
+================================================================================
+
+🎯 OBJETIVOS
+================================================================================
+
+O Symyah é um sistema inteligente baseado em RAG (Retrieval-Augmented Generation)
+projetado para auxiliar psicólogos clínicos e psicopedagogos no:
+
+• Gerenciamento de informações de pacientes
+  - Perfis clínicos completos com histórico, sensibilidades e documentos
+
+• Recuperação inteligente de documentos
+  - Busca semântica em documentos clínicos usando vetores
+
+• Geração de respostas contextualizadas
+  - Respostas baseadas em IA com evidências recuperadas do histórico do paciente
+
+• Avaliação clínica automatizada
+  - Sistema estruturado de avaliações com pontuação de confiança
+
+• Anonimização de dados sensíveis
+  - Proteção de PII (informações pessoalmente identificáveis)
+
+• Auditoria e conformidade
+  - Registro completo de todas as interações para fins de auditoria clínica
+
+
+🛠️ STACK TECNOLÓGICA
+================================================================================
+
+BACKEND
+-------
+| Tecnologia           | Finalidade                                      |
+|----------------------|-------------------------------------------------|
+| Python 3.9+          | Linguagem principal                             |
+| FastAPI              | API RESTful                                     |
+| PostgreSQL + pgvector| Banco de dados relacional com busca vetorial    |
+| Google Gemini API    | Embeddings e geração de respostas (primário)    |
+| OpenAI API           | Fallback para embeddings                        |
+| LangChain            | Framework para aplicações com LLMs              |
+| PyTorch + Transformers| Modelos de linguagem locais                    |
+| JWT + Passlib/Argon2 | Autenticação e hashing de senhas                |
+| Pydantic             | Validação de dados                              |
+
+FRONTEND
+--------
+| Tecnologia           | Finalidade                                      |
+|----------------------|-------------------------------------------------|
+| Streamlit            | Interface interativa rápida                     |
+| Flask + Jinja2       | Frontend web tradicional                        |
+| Bootstrap 5          | Design responsivo                               |
+
+PROCESSAMENTO DE DOCUMENTOS
+---------------------------
+• PyPDF2, python-docx, python-pptx - Leitura de PDF, DOCX, PPTX
+• Pandas + NumPy - Manipulação de dados
+
+INFRAESTRUTURA
+--------------
+• Docker + Docker Compose - Containerização
+• Uvicorn - Servidor ASGI
+
+
+🏗️ ARQUITETURA
+================================================================================
+
+┌─────────────────────────────────────────────────────────────┐
+│                    Frontends (Streamlit/Flask)              │
+└─────────────────────────────────────────────────────────────┘
+                            │
+                            ▼
+┌─────────────────────────────────────────────────────────────┐
+│              API FastAPI + Autenticação JWT                 │
+└─────────────────────────────────────────────────────────────┘
+                            │
+                            ▼
+┌─────────────────────────────────────────────────────────────┐
+│   Clinical AI System (RAG + LoRA + Gemini + Model Selector) │
+└─────────────────────────────────────────────────────────────┘
+                            │
+                            ▼
+┌─────────────────────────────────────────────────────────────┐
+│         PostgreSQL + pgvector (Busca Vetorial)              │
+└─────────────────────────────────────────────────────────────┘
+
+
+✨ FUNCIONALIDADES PRINCIPAIS
+================================================================================
+
+1. GESTÃO DE PACIENTES
+   - CRUD completo com perfis de sensibilidade
+
+2. UPLOAD DE DOCUMENTOS
+   - PDF, DOCX, TXT com processamento automático
+
+3. CONSULTAS RAG
+   - Perguntas e respostas baseadas em contexto recuperado
+
+4. AVALIAÇÃO CLÍNICA
+   - Sistema estruturado com evidências recuperadas
+
+5. MÉTRICAS DE QUALIDADE
+   - Avaliação de acuracidade, latência e custo
+
+6. MULTI-INQUILINO
+   - Isolamento de dados por usuário (owner_id)
+
+7. FALLBACK EM CAMADAS
+   - Gemini → OpenAI → Modelos Locais → RAG-only
+
+
+📦 COMO EXECUTAR
+================================================================================
+
+# 1. Configurar ambiente
+python3 -m venv venv && source venv/bin/activate
+pip install -r requirements.txt
+
+# 2. Configurar variáveis de ambiente
+cp .env.example .env
+# Editar .env com GOOGLE_API_KEY, DATABASE_URL, SECRET_KEY
+
+# 3. Iniciar com Docker (recomendado)
+docker-compose up -d
+
+# 4. Acessar
+# API: http://localhost:8000
+# Frontend Flask: http://localhost:5000
+# Streamlit: streamlit run frontend.py
+
+
+🔒 SEGURANÇA E CONFORMIDADE
+================================================================================
+
+• Isolamento de Tenant - Cada terapeuta opera em ambiente isolado
+• Controle de acesso baseado em owner_id
+• Filtragem automática de dados por proprietário
+• Anonimização de PII (nomes, datas, dados sensíveis)
+• Auditoria completa - Registro de todas as consultas e operações
+• Conformidade com regulamentações de proteção de dados clínicos
+
+
+================================================================================
+Este é um sistema completo e production-ready para assistência clínica com IA,
+com foco em privacidade, segurança e conformidade com regulamentações de
+proteção de dados de saúde.
+================================================================================

@@ -1,0 +1,328 @@
+{% extends "base.html" %}
+
+{% block title %}Histórico de Consultas - TEAChat{% endblock %}
+
+{% block extra_css %}
+<style>
+    .query-card {
+        transition: all 0.3s;
+        border-left: 4px solid var(--info-color);
+    }
+    
+    .query-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 8px rgba(0,0,0,0.12);
+    }
+    
+    .history-filters {
+        background: white;
+        padding: 1.5rem;
+        border-radius: 10px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.08);
+        margin-bottom: 1.5rem;
+    }
+    
+    .query-date {
+        font-size: 0.875rem;
+        color: var(--secondary-color);
+    }
+    
+    .model-badge {
+        font-size: 0.75rem;
+    }
+    
+    .query-content {
+        max-height: 100px;
+        overflow-y: auto;
+    }
+    
+    .action-buttons {
+        margin-top: 15px;
+        padding-top: 15px;
+        border-top: 1px solid #eee;
+    }
+    
+    .markdown-content h2, .markdown-content h3, .markdown-content h4 {
+        margin-top: 1.5rem;
+        margin-bottom: 1rem;
+        color: #2c3e50;
+    }
+
+    .markdown-content h2 {
+        font-size: 1.5rem;
+        border-bottom: 2px solid #3498db;
+        padding-bottom: 0.3rem;
+    }
+
+    .markdown-content h3 {
+        font-size: 1.25rem;
+        border-bottom: 1px solid #3498db;
+        padding-bottom: 0.3rem;
+    }
+
+    .markdown-content h4 {
+        font-size: 1.1rem;
+        margin-top: 1.2rem;
+        margin-bottom: 0.8rem;
+    }
+
+    .markdown-content ul, .markdown-content ol {
+        padding-left: 1.5rem;
+        margin-bottom: 1rem;
+    }
+
+    .markdown-content li {
+        margin-bottom: 0.5rem;
+    }
+
+    .markdown-content p {
+        margin-bottom: 1rem;
+        line-height: 1.6;
+    }
+
+    .markdown-content strong {
+        font-weight: 600;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2><i class="bi bi-search"></i> Histórico de Consultas</h2>
+    <a href="{{ url_for('history') }}" class="btn btn-outline-secondary">
+        <i class="bi bi-arrow-left"></i> Voltar
+    </a>
+</div>
+
+<!-- Filtros -->
+<div class="history-filters">
+    <form method="GET" class="row g-3">
+        <div class="col-md-4">
+            <label for="patient_id" class="form-label">Paciente</label>
+            <select class="form-select patient-select" id="patient_id" name="patient_id">
+                <option value="">Todos os pacientes</option>
+                {% for patient in patients %}
+                    <option value="{{ patient.id }}" {% if request.args.get('patient_id') == patient.id|string %}selected{% endif %}>
+                        {{ patient.name or patient.first_name + " " + patient.last_name }}
+                    </option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="col-md-3">
+            <label for="limit" class="form-label">Resultados por página</label>
+            <select class="form-select" id="limit" name="limit">
+                <option value="10" {% if request.args.get('limit', '10') == '10' %}selected{% endif %}>10</option>
+                <option value="25" {% if request.args.get('limit', '10') == '25' %}selected{% endif %}>25</option>
+                <option value="50" {% if request.args.get('limit', '10') == '50' %}selected{% endif %}>50</option>
+            </select>
+        </div>
+        <div class="col-md-3">
+            <label for="offset" class="form-label">Página</label>
+            <input type="number" class="form-control" id="offset" name="offset" 
+                   value="{{ request.args.get('offset', '0') }}" min="0">
+        </div>
+        <div class="col-md-2 d-flex align-items-end">
+            <button type="submit" class="btn btn-primary w-100">
+                <i class="bi bi-funnel"></i> Filtrar
+            </button>
+        </div>
+    </form>
+</div>
+
+<!-- Lista de consultas -->
+{% if queries and queries|length > 0 %}
+<div class="row">
+    {% for query in queries %}
+    <div class="col-md-6 col-lg-4 mb-4">
+        <div class="card query-card h-100">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-start mb-2">
+                    <span class="badge bg-info">Consulta</span>
+                    <span class="query-date">{{ query.created_at[:16] if query.created_at else "N/A" }}</span>
+                </div>
+                
+                <h6 class="card-title">
+                    <i class="bi bi-chat-text text-muted"></i> Consulta
+                </h6>
+                
+                <p class="card-text small">
+                    <strong>Modelo:</strong> 
+                    <span class="badge bg-success model-badge">{{ query.model_used }}</span>
+                </p>
+                
+                <p class="card-text small">
+                    <strong>Tempo:</strong> {{ "%.2f"|format(query.processing_time) }}s
+                </p>
+                
+                <p class="card-text small">
+                    <strong>Tokens:</strong> {{ query.tokens_used }}
+                </p>
+                
+                <div class="query-content mt-2">
+                    <p class="small mb-1"><strong>Pergunta:</strong></p>
+                    <p class="text-muted small">{{ query.query[:100] }}{% if query.query|length > 100 %}...{% endif %}</p>
+                    
+                    {% if query.response %}
+                    <p class="small mb-1"><strong>Resposta (trecho):</strong></p>
+                    <div class="text-muted small markdown-content">
+                        {{ query.response[:300]|replace('\n', '<br>')|replace('## ', '<h4>')|replace('**', '<strong>')|replace('<strong><strong>', '<strong>')|replace('</strong></strong>', '</strong>')|safe }}
+                        {% if query.response|length > 300 %}...{% endif %}
+                    </div>
+                    {% endif %}
+                </div>
+                
+                <div class="action-buttons">
+                    <button class="btn btn-sm btn-outline-warning me-2" 
+                            onclick="editQuery({{ query.id }}, '{{ query.query|replace("'", "\\'") }}')">
+                        <i class="bi bi-pencil"></i> Editar
+                    </button>
+                    <button class="btn btn-sm btn-outline-danger" 
+                            onclick="deleteQuery({{ query.id }}, '{{ query.query[:50]|replace("'", "\\'") }}...')">
+                        <i class="bi bi-trash"></i> Excluir
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+
+<!-- Paginação -->
+{% if total > limit %}
+<div class="d-flex justify-content-center mt-4">
+    <nav>
+        <ul class="pagination">
+            {% set current_offset = request.args.get('offset', '0')|int %}
+            {% set current_limit = request.args.get('limit', '10')|int %}
+            
+            {% if current_offset > 0 %}
+                <li class="page-item">
+                    <a class="page-link" href="{{ url_for('history_queries', patient_id=request.args.get('patient_id'), limit=current_limit, offset=max(0, current_offset - current_limit)) }}">Anterior</a>
+                </li>
+            {% endif %}
+            
+            {% set page_count = (total / current_limit)|round(0, 'ceil')|int %}
+            {% for page in range(max(1, (current_offset // current_limit) - 2), min(page_count + 1, (current_offset // current_limit) + 4)) %}
+                {% set page_offset = (page - 1) * current_limit %}
+                <li class="page-item {% if page_offset == current_offset %}active{% endif %}">
+                    <a class="page-link" href="{{ url_for('history_queries', patient_id=request.args.get('patient_id'), limit=current_limit, offset=page_offset) }}">{{ page }}</a>
+                </li>
+            {% endfor %}
+            
+            {% if current_offset + current_limit < total %}
+                <li class="page-item">
+                    <a class="page-link" href="{{ url_for('history_queries', patient_id=request.args.get('patient_id'), limit=current_limit, offset=current_offset + current_limit) }}">Próxima</a>
+                </li>
+            {% endif %}
+        </ul>
+    </nav>
+</div>
+{% endif %}
+
+{% else %}
+<div class="alert alert-info">
+    <i class="bi bi-search"></i> Nenhuma consulta registrada.
+</div>
+{% endif %}
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // Atualizar a lista de pacientes quando a página carregar
+    document.addEventListener('DOMContentLoaded', function() {
+        updatePatientList();
+    });
+    
+    async function deleteQuery(queryId, queryText) {
+        const confirmed = confirm(`Tem certeza que deseja excluir esta consulta: "${queryText}"? Esta ação não pode ser desfeita.`);
+
+        if (confirmed) {
+            try {
+                const response = await fetch(`/api/history/queries/${queryId}`, {
+                    method: 'DELETE',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
+                });
+
+                if (response.ok) {
+                    // Recarregar a página para atualizar a lista
+                    location.reload();
+                } else {
+                    let errorMessage = 'Erro desconhecido';
+                    try {
+                        const error = await response.json();
+                        errorMessage = error.detail || error.message || errorMessage;
+                    } catch (e) {
+                        // Se a resposta não for JSON, tentar obter texto
+                        try {
+                            const errorText = await response.text();
+                            errorMessage = errorText || errorMessage;
+                        } catch (e2) {
+                            // Se não for possível obter texto, usar mensagem padrão
+                            errorMessage = `Erro HTTP ${response.status}: ${response.statusText}`;
+                        }
+                    }
+                    alert(`Erro ao excluir consulta: ${errorMessage}`);
+                }
+            } catch (error) {
+                console.error('Erro ao excluir consulta:', error);
+                alert('Erro de conexão ao tentar excluir a consulta.');
+            }
+        }
+    }
+
+    function editQuery(queryId, queryText) {
+        // Solicitar nova consulta e resposta ao usuário
+        const newQuery = prompt('Editar consulta:', queryText);
+        if (newQuery !== null) {
+            const newResponse = prompt('Editar resposta (deixe em branco para manter a atual):', '');
+            if (newResponse !== null) {
+                updateQuery(queryId, newQuery, newResponse === '' ? null : newResponse);
+            }
+        }
+    }
+
+    async function updateQuery(queryId, newQuery, newResponse) {
+        try {
+            const formData = new FormData();
+            if (newQuery !== null) {
+                formData.append('query_text', newQuery);
+            }
+            if (newResponse !== null) {
+                formData.append('response', newResponse);
+            }
+
+            const response = await fetch(`/api/history/queries/${queryId}`, {
+                method: 'PUT',
+                body: formData
+            });
+
+            if (response.ok) {
+                // Recarregar a página para atualizar a lista
+                location.reload();
+            } else {
+                let errorMessage = 'Erro desconhecido';
+                try {
+                    const error = await response.json();
+                    errorMessage = error.detail || error.message || errorMessage;
+                } catch (e) {
+                    // Se a resposta não for JSON, tentar obter texto
+                    try {
+                        const errorText = await response.text();
+                        errorMessage = errorText || errorMessage;
+                    } catch (e2) {
+                        // Se não for possível obter texto, usar mensagem padrão
+                        errorMessage = `Erro HTTP ${response.status}: ${response.statusText}`;
+                    }
+                }
+                alert(`Erro ao atualizar consulta: ${errorMessage}`);
+            }
+        } catch (error) {
+            console.error('Erro ao atualizar consulta:', error);
+            alert('Erro de conexão ao tentar atualizar a consulta.');
+        }
+    }
+</script>
+{% endblock %}

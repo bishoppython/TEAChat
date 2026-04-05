@@ -1,0 +1,35 @@
+# Python
+venv/
+__pycache__/
+*.pyc
+
+# IA
+models/
+*.pt
+*.bin
+*.ckpt
+
+# Banco
+*.db
+
+# Node
+node_modules/
+
+# Ambiente
+.env
+.env.aws
+.env.local
+
+# Cache
+.cache/
+
+# Deploy
+aws-deploy/.env.aws
+aws-deploy/*.bak
+*.sarif
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo

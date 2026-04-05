@@ -1,0 +1,79 @@
+version: '3.8'
+
+services:
+  # Banco de dados PostgreSQL com pgvector
+  postgres:
+    image: ankane/pgvector:latest
+    container_name: symyah-postgres
+    environment:
+      POSTGRES_DB: symyah_db
+      POSTGRES_USER: symyah_user
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-mude_esta_senha_em_producao}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./database/schema.sql:/docker-entrypoint-initdb.d/1-schema.sql
+      - ./database/metrics_schema.sql:/docker-entrypoint-initdb.d/2-metrics.sql
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U symyah_user -d symyah_db"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - symyah_network
+
+  # API Backend (FastAPI)
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: symyah-api
+    environment:
+      DATABASE_URL: postgresql://symyah_user:${POSTGRES_PASSWORD:-mude_esta_senha_em_producao}@postgres:5432/symyah_db
+      GOOGLE_API_KEY: ${GOOGLE_API_KEY}
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      SECRET_KEY: ${SECRET_KEY:-mude_esta_chave_secreta_em_producao}
+      HOST: 0.0.0.0
+      PORT: 8000
+      RAG_TOP_K: 4
+      RAG_MIN_SIMILARITY: 0.5
+    ports:
+      - "8000:8000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "python", "-c", "import requests; requests.get('http://localhost:8000/health', timeout=5)"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    networks:
+      - symyah_network
+    restart: unless-stopped
+
+  # Frontend Flask (opcional)
+  frontend:
+    build:
+      context: ./frontFlask
+      dockerfile: Dockerfile
+    container_name: symyah-frontend
+    environment:
+      BACKEND_URL: http://api:8000
+      SECRET_KEY: ${SECRET_KEY:-mude_esta_chave_secreta_em_producao}
+    ports:
+      - "5000:5000"
+    depends_on:
+      - api
+    networks:
+      - symyah_network
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
+    driver: local
+
+networks:
+  symyah_network:
+    driver: bridge

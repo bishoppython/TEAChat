@@ -1,0 +1,282 @@
+{% extends "base.html" %}
+
+{% block title %}Avaliação Clínica - TEAChat{% endblock %}
+
+{% block extra_css %}
+<style>
+    .markdown-content h2, .markdown-content h3, .markdown-content h4 {
+        margin-top: 1.5rem;
+        margin-bottom: 1rem;
+        color: #2c3e50;
+    }
+    
+    .markdown-content h2 {
+        border-bottom: 2px solid #3498db;
+        padding-bottom: 0.3rem;
+    }
+
+    .markdown-content h3 {
+        font-size: 1.25rem;
+        border-bottom: 1px solid #3498db;
+        padding-bottom: 0.3rem;
+    }
+
+    .markdown-content h4 {
+        font-size: 1.1rem;
+        margin-top: 1.2rem;
+        margin-bottom: 0.8rem;
+    }
+
+    .markdown-content ul, .markdown-content ol {
+        padding-left: 1.5rem;
+        margin-bottom: 1rem;
+    }
+    
+    .markdown-content li {
+        margin-bottom: 0.5rem;
+    }
+    
+    .markdown-content p {
+        margin-bottom: 1rem;
+        line-height: 1.6;
+    }
+    
+    .markdown-content blockquote {
+        border-left: 4px solid #3498db;
+        padding-left: 1rem;
+        margin-left: 0;
+        margin-right: 0;
+        color: #555;
+    }
+    
+    .markdown-content pre {
+        background-color: #f8f9fa;
+        border: 1px solid #e9ecef;
+        border-radius: 0.375rem;
+        padding: 1rem;
+        overflow-x: auto;
+        margin-bottom: 1rem;
+    }
+    
+    .markdown-content code {
+        background-color: #f8f9fa;
+        padding: 0.2rem 0.4rem;
+        border-radius: 0.25rem;
+        font-size: 0.875em;
+    }
+    
+    .markdown-content strong {
+        font-weight: 600;
+    }
+    
+    .markdown-content em {
+        font-style: italic;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<h2 class="mb-4"><i class="bi bi-clipboard-check"></i> Avaliação Clínica</h2>
+
+<div class="card">
+    <div class="card-body">
+        <form method="POST" action="{{ url_for('assessment') }}">
+            <div class="mb-3">
+                <label for="patient_id" class="form-label">Paciente <span class="text-danger">*</span></label>
+                <select class="form-select patient-select" id="patient_id" name="patient_id" required>
+                    <option value="" selected>Selecione um paciente...</option>
+                    {% for patient in patients %}
+                        <option value="{{ patient.id }}">{{ patient.name or (patient.first_name or '') + " " + (patient.last_name or '') }}</option>
+                    {% endfor %}
+                </select>
+                <div class="invalid-feedback">Por favor, selecione um paciente.</div>
+                <small class="text-muted">Selecione o paciente para a avaliação</small>
+            </div>
+
+            <div class="mb-3">
+                <label for="assessment_type" class="form-label">Tipo de Avaliação</label>
+                <select class="form-select" id="assessment_type" name="assessment_type">
+                    <option value="clinical" selected>Avaliação Clínica Geral</option>
+                    <option value="progress">Avaliação de Progresso</option>
+                    <option value="risk">Avaliação de Risco</option>
+                    <option value="diagnostic">Avaliação Diagnóstica</option>
+                </select>
+            </div>
+
+            <div class="mb-3">
+                <label for="query" class="form-label">Descrição da Avaliação <span class="text-danger">*</span></label>
+                <textarea class="form-control" id="query" name="query" rows="6"
+                          placeholder="Descreva o que você gostaria de avaliar..." required></textarea>
+                <small class="text-muted">
+                    Exemplo: "Avaliar o progresso do paciente nas últimas 4 semanas com foco em ansiedade"
+                </small>
+            </div>
+
+            <button type="submit" class="btn btn-primary">
+                <i class="bi bi-play-circle"></i> Executar Avaliação
+            </button>
+        </form>
+    </div>
+</div>
+
+<script>
+    // Carregar pacientes quando o DOM estiver pronto
+    document.addEventListener('DOMContentLoaded', function() {
+        updatePatientList();
+    });
+</script>
+
+{% if result %}
+<div class="result-container mt-4">
+    <h4 class="mb-3">
+        <i class="bi bi-clipboard-data"></i> Resultado da Avaliação
+    </h4>
+
+    <div class="alert alert-primary border-start border-4 border-primary">
+        <h6><i class="bi bi-info-circle"></i> Tipo: {{ result.assessment_type }}</h6>
+        <small class="text-muted">Paciente: {{ result.patient_id }}</small>
+    </div>
+
+    <div class="card mb-3">
+        <div class="card-header">
+            <strong>Análise</strong>
+        </div>
+        <div class="card-body markdown-content">
+            {{ result.response|replace('\n', '<br>')|replace('## ', '<h4>')|replace('**', '<strong>')|replace('<strong><strong>', '<strong>')|replace('</strong></strong>', '</strong>')|safe }}
+        </div>
+    </div>
+
+    <hr class="my-4">
+
+    <h5 class="mb-3">Métricas Detalhadas da Avaliação</h5>
+    <div class="row">
+        <!-- Métricas de latência -->
+        <div class="col-md-3">
+            <div class="card bg-light">
+                <div class="card-body text-center">
+                    <i class="bi bi-clock text-primary display-6"></i>
+                    <h4 class="mt-2">{{ "%.2f"|format(result.latency_seconds or 0) }}s</h4>
+                    <p class="text-muted mb-0">Tempo de Resposta</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Métricas de custo -->
+        <div class="col-md-3">
+            <div class="card bg-light">
+                <div class="card-body text-center">
+                    <i class="bi bi-currency-dollar text-success display-6"></i>
+                    <h4 class="mt-2">${{ "%.4f"|format(result.total_cost_usd or 0) }}</h4>
+                    <p class="text-muted mb-0">Custo Estimado</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Métricas de recuperação -->
+        <div class="col-md-3">
+            <div class="card bg-light">
+                <div class="card-body text-center">
+                    <i class="bi bi-search text-info display-6"></i>
+                    <h4 class="mt-2">{{ "%.2f"|format(result.retrieval_precision or 0) }}</h4>
+                    <p class="text-muted mb-0">Precisão</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-3">
+            <div class="card bg-light">
+                <div class="card-body text-center">
+                    <i class="bi bi-arrow-repeat text-info display-6"></i>
+                    <h4 class="mt-2">{{ "%.2f"|format(result.retrieval_recall or 0) }}</h4>
+                    <p class="text-muted mb-0">Recall</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row mt-3">
+        <!-- Métricas de fidelidade -->
+        <div class="col-md-3">
+            <div class="card bg-light">
+                <div class="card-body text-center">
+                    <i class="bi bi-check-circle text-warning display-6"></i>
+                    <h4 class="mt-2">{{ "%.2f"|format(result.faithfulness_score or 0) }}</h4>
+                    <p class="text-muted mb-0">Fidelidade</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Métricas de relevância -->
+        <div class="col-md-3">
+            <div class="card bg-light">
+                <div class="card-body text-center">
+                    <i class="bi bi-stars text-danger display-6"></i>
+                    <h4 class="mt-2">{{ "%.2f"|format(result.answer_relevance_score or 0) }}</h4>
+                    <p class="text-muted mb-0">Relevância</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Métricas NDCG -->
+        <div class="col-md-3">
+            <div class="card bg-light">
+                <div class="card-body text-center">
+                    <i class="bi bi-graph-up text-secondary display-6"></i>
+                    <h4 class="mt-2">{{ "%.2f"|format(result.ndcg_score or 0) }}</h4>
+                    <p class="text-muted mb-0">NDCG</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Métricas de legibilidade -->
+        <div class="col-md-3">
+            <div class="card bg-light">
+                <div class="card-body text-center">
+                    <i class="bi bi-text-center text-dark display-6"></i>
+                    <h4 class="mt-2">{{ "%.1f"|format(result.flesch_reading_ease or 0) }}</h4>
+                    <p class="text-muted mb-0">Legibilidade</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="alert alert-info mt-4">
+        <i class="bi bi-lightbulb"></i>
+        <strong>Nota:</strong> Esta avaliação foi gerada automaticamente com base nos documentos
+        disponíveis no sistema. Sempre use seu julgamento clínico profissional para tomar decisões.
+    </div>
+</div>
+{% endif %}
+
+{% block extra_js %}
+<script>
+    // Atualizar placeholder baseado no tipo de avaliação
+    const assessmentType = document.getElementById('assessment_type');
+    const queryTextarea = document.getElementById('query');
+
+    const placeholders = {
+        'clinical': 'Exemplo: "Avaliar o estado geral do paciente e identificar principais desafios"',
+        'progress': 'Exemplo: "Avaliar o progresso do paciente nas últimas 4 semanas"',
+        'risk': 'Exemplo: "Identificar possíveis fatores de risco e áreas que requerem atenção"',
+        'diagnostic': 'Exemplo: "Analisar sintomas e comportamentos para suporte diagnóstico"'
+    };
+
+    assessmentType.addEventListener('change', function() {
+        queryTextarea.placeholder = placeholders[this.value] || placeholders['clinical'];
+    });
+
+    // Adicionar validação de formulário para garantir que um paciente seja selecionado
+    const form = document.querySelector('form');
+    const patientSelect = document.getElementById('patient_id');
+
+    form.addEventListener('submit', function(e) {
+        if (patientSelect.value === '') {
+            e.preventDefault();
+            alert('Selecione um paciente antes de continuar!');
+            patientSelect.focus();
+            return false;
+        }
+    });
+</script>
+{% endblock %}
+{% endblock %}

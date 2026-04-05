@@ -1,0 +1,692 @@
+{% extends "base.html" %}
+
+{% block title %}Editar Paciente - Sistema de IA{% endblock %}
+
+{% block extra_css %}
+<style>
+    .diagnosis-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+        gap: 10px;
+    }
+
+    .diagnosis-option {
+        position: relative;
+    }
+
+    .diagnosis-option input[type="checkbox"] {
+        position: absolute;
+        opacity: 0;
+    }
+
+    .diagnosis-option label {
+        display: block;
+        padding: 12px 15px;
+        border: 2px solid #dee2e6;
+        border-radius: 8px;
+        cursor: pointer;
+        transition: all 0.3s;
+        text-align: center;
+        background: white;
+    }
+
+    .diagnosis-option input[type="checkbox"]:checked + label {
+        background: linear-gradient(135deg, #4a6fa5 0%, #5a7db8 100%);
+        color: white;
+        border-color: #4a6fa5;
+        transform: translateY(-2px);
+        box-shadow: 0 4px 8px rgba(74, 111, 165, 0.3);
+    }
+
+    .diagnosis-option label:hover {
+        border-color: #4a6fa5;
+        background-color: #f8f9fa;
+    }
+
+    .diagnosis-option input[type="checkbox"]:checked + label:hover {
+        background: linear-gradient(135deg, #3a5f95 0%, #4a6da8 100%);
+    }
+
+    .form-section {
+        background: white;
+        padding: 20px;
+        border-radius: 10px;
+        margin-bottom: 20px;
+        border-left: 4px solid #4a6fa5;
+    }
+
+    .section-title {
+        color: #4a6fa5;
+        font-weight: 600;
+        margin-bottom: 15px;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+    }
+
+    .required-field::after {
+        content: " *";
+        color: #dc3545;
+    }
+
+    #age-display {
+        font-size: 1.5rem;
+        font-weight: 700;
+        color: #4a6fa5;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2><i class="bi bi-pencil-square"></i> Editar Paciente - {{ patient.first_name }} {{ patient.last_name }}</h2>
+    <a href="{{ url_for('patients_list') }}" class="btn btn-outline-secondary">
+        <i class="bi bi-arrow-left"></i> Voltar
+    </a>
+</div>
+
+<form method="POST" action="{{ url_for('patient_edit', patient_id=patient.id) }}" id="patientForm">
+    <!-- Seção: Informações Pessoais -->
+    <div class="form-section">
+        <h5 class="section-title">
+            <i class="bi bi-person-circle"></i> Informações Pessoais
+        </h5>
+
+        <div class="row">
+            <div class="col-md-6 mb-3">
+                <label for="first_name" class="form-label required-field">Nome</label>
+                <input type="text" class="form-control" id="first_name" name="first_name"
+                       value="{{ patient.first_name }}" placeholder="Ex: João" required>
+            </div>
+
+            <div class="col-md-6 mb-3">
+                <label for="last_name" class="form-label required-field">Sobrenome</label>
+                <input type="text" class="form-control" id="last_name" name="last_name"
+                       value="{{ patient.last_name }}" placeholder="Ex: Silva Santos" required>
+            </div>
+        </div>
+
+        <div class="row">
+            <div class="col-md-6 mb-3">
+                <label for="date_of_birth" class="form-label required-field">Data de Nascimento</label>
+                <input type="date" class="form-control" id="date_of_birth" name="date_of_birth"
+                       value="{{ patient.date_of_birth[:10] if patient.date_of_birth else '' }}" max="{{ today }}" required>
+                <small class="text-muted">Usado para calcular a idade automaticamente</small>
+            </div>
+
+            <div class="col-md-6 mb-3">
+                <label for="age" class="form-label">Idade</label>
+                <div class="input-group">
+                    <span class="input-group-text"><i class="bi bi-calendar3"></i></span>
+                    <input type="number" class="form-control" id="age" name="age"
+                           value="{{ patient.age }}" placeholder="Calculado automaticamente" required>
+                    <span class="input-group-text">anos</span>
+                </div>
+                <div id="age-display" class="mt-2">{{ patient.age }} anos</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Seção: Diagnóstico -->
+    <div class="form-section">
+        <h5 class="section-title">
+            <i class="bi bi-clipboard2-pulse"></i> Diagnóstico
+        </h5>
+
+        <div class="mb-3">
+            <label class="form-label">Selecione o(s) diagnóstico(s):</label>
+            <small class="text-muted d-block mb-3">
+                <i class="bi bi-info-circle"></i> Você pode selecionar múltiplos diagnósticos se aplicável
+            </small>
+
+            <div class="diagnosis-grid">
+                <div class="diagnosis-option">
+                    <input type="checkbox" id="diag_tea" name="diagnosis" value="TEA" 
+                           {% if 'TEA' in patient.diagnosis %}checked{% endif %}>
+                    <label for="diag_tea">
+                        <i class="bi bi-puzzle"></i><br>
+                        <strong>TEA</strong><br>
+                        <small>Transtorno do Espectro Autista</small>
+                    </label>
+                </div>
+
+                <div class="diagnosis-option">
+                    <input type="checkbox" id="diag_tdah" name="diagnosis" value="TDAH"
+                           {% if 'TDAH' in patient.diagnosis %}checked{% endif %}>
+                    <label for="diag_tdah">
+                        <i class="bi bi-lightning"></i><br>
+                        <strong>TDAH</strong><br>
+                        <small>Déficit de Atenção e Hiperatividade</small>
+                    </label>
+                </div>
+
+                <div class="diagnosis-option">
+                    <input type="checkbox" id="diag_tda" name="diagnosis" value="TDA"
+                           {% if 'TDA' in patient.diagnosis %}checked{% endif %}>
+                    <label for="diag_tda">
+                        <i class="bi bi-eye-slash"></i><br>
+                        <strong>TDA</strong><br>
+                        <small>Déficit de Atenção</small>
+                    </label>
+                </div>
+
+                <div class="diagnosis-option">
+                    <input type="checkbox" id="diag_dislexia" name="diagnosis" value="Dislexia"
+                           {% if 'Dislexia' in patient.diagnosis %}checked{% endif %}>
+                    <label for="diag_dislexia">
+                        <i class="bi bi-book"></i><br>
+                        <strong>Dislexia</strong><br>
+                        <small>Dificuldade de Leitura</small>
+                    </label>
+                </div>
+
+                <div class="diagnosis-option">
+                    <input type="checkbox" id="diag_disgrafia" name="diagnosis" value="Disgrafia"
+                           {% if 'Disgrafia' in patient.diagnosis %}checked{% endif %}>
+                    <label for="diag_disgrafia">
+                        <i class="bi bi-pencil"></i><br>
+                        <strong>Disgrafia</strong><br>
+                        <small>Dificuldade de Escrita</small>
+                    </label>
+                </div>
+
+                <div class="diagnosis-option">
+                    <input type="checkbox" id="diag_discalculia" name="diagnosis" value="Discalculia"
+                           {% if 'Discalculia' in patient.diagnosis %}checked{% endif %}>
+                    <label for="diag_discalculia">
+                        <i class="bi bi-calculator"></i><br>
+                        <strong>Discalculia</strong><br>
+                        <small>Dificuldade com Números</small>
+                    </label>
+                </div>
+
+                <div class="diagnosis-option">
+                    <input type="checkbox" id="diag_tourette" name="diagnosis" value="Tourette"
+                           {% if 'Tourette' in patient.diagnosis %}checked{% endif %}>
+                    <label for="diag_tourette">
+                        <i class="bi bi-shuffle"></i><br>
+                        <strong>Tourette</strong><br>
+                        <small>Síndrome de Tourette</small>
+                    </label>
+                </div>
+
+                <div class="diagnosis-option">
+                    <input type="checkbox" id="diag_toc" name="diagnosis" value="TOC"
+                           {% if 'TOC' in patient.diagnosis %}checked{% endif %}>
+                    <label for="diag_toc">
+                        <i class="bi bi-arrow-repeat"></i><br>
+                        <strong>TOC</strong><br>
+                        <small>Transtorno Obsessivo-Compulsivo</small>
+                    </label>
+                </div>
+
+                <div class="diagnosis-option">
+                    <input type="checkbox" id="diag_tod" name="diagnosis" value="TOD"
+                           {% if 'TOD' in patient.diagnosis %}checked{% endif %}>
+                    <label for="diag_tod">
+                        <i class="bi bi-exclamation-triangle"></i><br>
+                        <strong>TOD</strong><br>
+                        <small>Transtorno Opositor Desafiador</small>
+                    </label>
+                </div>
+
+                <div class="diagnosis-option">
+                    <input type="checkbox" id="diag_ahsd" name="diagnosis" value="AHSD"
+                           {% if 'AHSD' in patient.diagnosis %}checked{% endif %}>
+                    <label for="diag_ahsd">
+                        <i class="bi bi-star"></i><br>
+                        <strong>AHSD</strong><br>
+                        <small>Altas Habilidades / Superdotação</small>
+                    </label>
+                </div>
+
+                <div class="diagnosis-option">
+                    <input type="checkbox" id="diag_down" name="diagnosis" value="Síndrome de Down"
+                           {% if 'Down' in patient.diagnosis %}checked{% endif %}>
+                    <label for="diag_down">
+                        <i class="bi bi-heart"></i><br>
+                        <strong>Down</strong><br>
+                        <small>Síndrome de Down</small>
+                    </label>
+                </div>
+
+                <div class="diagnosis-option">
+                    <input type="checkbox" id="diag_rett" name="diagnosis" value="Síndrome de Rett"
+                           {% if 'Rett' in patient.diagnosis %}checked{% endif %}>
+                    <label for="diag_rett">
+                        <i class="bi bi-person-x"></i><br>
+                        <strong>Rett</strong><br>
+                        <small>Síndrome de Rett</small>
+                    </label>
+                </div>
+
+                <div class="diagnosis-option">
+                    <input type="checkbox" id="diag_outros" name="diagnosis" value="Outros"
+                           {% if 'Outros' in patient.diagnosis or ('Outro' in patient.diagnosis) %}checked{% endif %}>
+                    <label for="diag_outros">
+                        <i class="bi bi-three-dots"></i><br>
+                        <strong>Outros</strong><br>
+                        <small>Especificar</small>
+                    </label>
+                </div>
+            </div>
+        </div>
+
+        <!-- Campo condicional para "Outros" -->
+        <div class="mb-3" id="outros-container" style="{% if 'Outros' in patient.diagnosis or 'Outro' in patient.diagnosis %}{% else %}display: none;{% endif %}">
+            <label for="diagnosis_other" class="form-label required-field">
+                Especifique o diagnóstico:
+            </label>
+            <input type="text" class="form-control" id="diagnosis_other" name="diagnosis_other"
+                   value="{% if 'Outros' in patient.diagnosis or 'Outro' in patient.diagnosis %}{{ patient.diagnosis }}{% endif %}" 
+                   placeholder="Digite o diagnóstico específico">
+        </div>
+
+        <div class="alert alert-info border-start border-4 border-info">
+            <i class="bi bi-info-circle"></i>
+            <strong>Nota:</strong> Se nenhum diagnóstico for selecionado, o paciente será registrado como "Em avaliação"
+        </div>
+    </div>
+
+    <!-- Seção: Características Clínicas -->
+    <div class="form-section">
+        <h5 class="section-title">
+            <i class="bi bi-graph-up"></i> Características Clínicas
+        </h5>
+
+        <div class="row">
+            <div class="col-md-6 mb-3">
+                <label for="neurotype" class="form-label">Tipo de Neurotipicidade</label>
+                <select class="form-select" id="neurotype" name="neurotype">
+                    <option value="">Selecione...</option>
+                    <option value="Neurotípico" {% if patient.neurotype == 'Neurotípico' %}selected{% endif %}>Neurotípico</option>
+                    <option value="Neurodivergente" {% if patient.neurotype == 'Neurodivergente' %}selected{% endif %}>Neurodivergente</option>
+                    <option value="Em avaliação" {% if patient.neurotype == 'Em avaliação' %}selected{% endif %}>Em avaliação</option>
+                </select>
+                <small class="text-muted">
+                    Neurotípico: desenvolvimento neurológico típico<br>
+                    Neurodivergente: funcionamento neurológico atípico
+                </small>
+            </div>
+
+            <div class="col-md-6 mb-3">
+                <label for="level" class="form-label">Nível de Suporte</label>
+                <select class="form-select" id="level" name="level">
+                    <option value="">Selecione...</option>
+                    <option value="Nível 1" {% if patient.level == 'Nível 1' %}selected{% endif %}>Nível 1 - Requer apoio</option>
+                    <option value="Nível 2" {% if patient.level == 'Nível 2' %}selected{% endif %}>Nível 2 - Requer apoio substancial</option>
+                    <option value="Nível 3" {% if patient.level == 'Nível 3' %}selected{% endif %}>Nível 3 - Requer apoio muito substancial</option>
+                    <option value="Não se aplica" {% if patient.level == 'Não se aplica' %}selected{% endif %}>Não se aplica</option>
+                </select>
+                <small class="text-muted">
+                    Classificação de acordo com o DSM-5 (principalmente para TEA)
+                </small>
+            </div>
+        </div>
+    </div>
+
+    <!-- Seção: Sensibilidades e Observações -->
+    <div class="form-section">
+        <h5 class="section-title">
+            <i class="bi bi-exclamation-triangle"></i> Sensibilidades e Observações
+        </h5>
+
+        <div class="mb-3">
+            <label for="sensitivities_description" class="form-label">Sensibilidades e Observações</label>
+            <textarea class="form-control" id="sensitivities_description" name="sensitivities_description" rows="5"
+                      placeholder="Descreva as sensibilidades do paciente, por exemplo:
+- Paciente tem forte sensibilidade à luz, sons altos e toques físicos
+- Evitar diretamente todos estes estímulos
+- Outras observações relevantes">{{ patient.sensitivities_description or '' }}</textarea>
+        </div>
+
+        <div class="alert alert-info border-start border-4 border-info">
+            <i class="bi bi-info-circle"></i>
+            <strong>Adicione múltiplas sensibilidades:</strong> Você pode adicionar múltiplas sensibilidades abaixo.
+        </div>
+    </div>
+
+    <!-- Seção: Detalhes das Sensibilidades -->
+    <div class="form-section">
+        <h5 class="section-title">
+            <i class="bi bi-list-ul"></i> Detalhes das Sensibilidades
+        </h5>
+
+        <div id="sensitivities-container">
+            <!-- Carregar sensibilidades existentes do paciente -->
+            {% if patient.sensitivities and patient.sensitivities|length > 0 %}
+                {% for sensitivity in patient.sensitivities %}
+                <div class="sensibility-item mb-3 p-3 border rounded">
+                    <div class="row">
+                        <div class="col-md-4 mb-2">
+                            <label class="form-label">Tipo de Sensibilidade</label>
+                            <select class="form-select" name="sensitivity_types[]">
+                                <option value="">Selecione...</option>
+                                <option value="Luz" {% if sensitivity.sensitivity_type == 'Luz' %}selected{% endif %}>Luz</option>
+                                <option value="Som" {% if sensitivity.sensitivity_type == 'Som' %}selected{% endif %}>Som</option>
+                                <option value="Toque" {% if sensitivity.sensitivity_type == 'Toque' %}selected{% endif %}>Toque</option>
+                                <option value="Textura" {% if sensitivity.sensitivity_type == 'Textura' %}selected{% endif %}>Textura</option>
+                                <option value="Cheiro" {% if sensitivity.sensitivity_type == 'Cheiro' %}selected{% endif %}>Cheiro</option>
+                                <option value="Gosto" {% if sensitivity.sensitivity_type == 'Gosto' %}selected{% endif %}>Gosto</option>
+                                <option value="Movimento" {% if sensitivity.sensitivity_type == 'Movimento' %}selected{% endif %}>Movimento</option>
+                                <option value="Temperatura" {% if sensitivity.sensitivity_type == 'Temperatura' %}selected{% endif %}>Temperatura</option>
+                                <option value="Outro" {% if sensitivity.sensitivity_type == 'Outro' %}selected{% endif %}>Outro</option>
+                                <option value="Não se aplica" {% if sensitivity.sensitivity_type == 'Não se aplica' %}selected{% endif %}>Não se aplica</option>
+                            </select>
+                        </div>
+                        <div class="col-md-4 mb-2">
+                            <label class="form-label">Nível de Sensibilidade</label>
+                            <select class="form-select" name="sensitivity_levels[]">
+                                <option value="">Selecione...</option>
+                                <option value="Baixo" {% if sensitivity.sensitivity_level == 'Baixo' %}selected{% endif %}>Baixo</option>
+                                <option value="Médio" {% if sensitivity.sensitivity_level == 'Médio' %}selected{% endif %}>Médio</option>
+                                <option value="Alto" {% if sensitivity.sensitivity_level == 'Alto' %}selected{% endif %}>Alto</option>
+                                <option value="Muito Alto" {% if sensitivity.sensitivity_level == 'Muito Alto' %}selected{% endif %}>Muito Alto</option>
+                                <option value="Não se aplica" {% if sensitivity.sensitivity_level == 'Não se aplica' %}selected{% endif %}>Não se aplica</option>
+                            </select>
+                        </div>
+                        <div class="col-md-4 mb-2">
+                            <label class="form-label">Descrição</label>
+                            <input type="text" class="form-control" name="sensitivity_descriptions[]" value="{{ sensitivity.description or '' }}" placeholder="Ex: Sensibilidade à luz fluorescente">
+                        </div>
+                    </div>
+                    <div class="d-flex justify-content-end">
+                        <button type="button" class="btn btn-danger btn-sm remove-sensibility" onclick="removeSensibility(this)">Remover</button>
+                    </div>
+                </div>
+                {% endfor %}
+            {% else %}
+                <!-- Sensibilidade inicial -->
+                <div class="sensibility-item mb-3 p-3 border rounded">
+                    <div class="row">
+                        <div class="col-md-4 mb-2">
+                            <label class="form-label">Tipo de Sensibilidade</label>
+                            <select class="form-select" name="sensitivity_types[]">
+                                <option value="">Selecione...</option>
+                                <option value="Luz">Luz</option>
+                                <option value="Som">Som</option>
+                                <option value="Toque">Toque</option>
+                                <option value="Textura">Textura</option>
+                                <option value="Cheiro">Cheiro</option>
+                                <option value="Gosto">Gosto</option>
+                                <option value="Movimento">Movimento</option>
+                                <option value="Temperatura">Temperatura</option>
+                                <option value="Outro">Outro</option>
+                                <option value="Não se aplica">Não se aplica</option>
+                            </select>
+                        </div>
+                        <div class="col-md-4 mb-2">
+                            <label class="form-label">Nível de Sensibilidade</label>
+                            <select class="form-select" name="sensitivity_levels[]">
+                                <option value="">Selecione...</option>
+                                <option value="Baixo">Baixo</option>
+                                <option value="Médio">Médio</option>
+                                <option value="Alto">Alto</option>
+                                <option value="Muito Alto">Muito Alto</option>
+                                <option value="Não se aplica">Não se aplica</option>
+                            </select>
+                        </div>
+                        <div class="col-md-4 mb-2">
+                            <label class="form-label">Descrição</label>
+                            <input type="text" class="form-control" name="sensitivity_descriptions[]" placeholder="Ex: Sensibilidade à luz fluorescente">
+                        </div>
+                    </div>
+                    <div class="d-flex justify-content-end">
+                        <button type="button" class="btn btn-danger btn-sm remove-sensibility" onclick="removeSensibility(this)">Remover</button>
+                    </div>
+                </div>
+            {% endif %}
+        </div>
+
+        <div class="mt-3">
+            <button type="button" class="btn btn-outline-primary" onclick="addSensibility()">
+                <i class="bi bi-plus-circle"></i> Adicionar Nova Sensibilidade
+            </button>
+        </div>
+    </div>
+
+    <!-- Seção: Descrição e Histórico -->
+    <div class="form-section">
+        <h5 class="section-title">
+            <i class="bi bi-journal-text"></i> Descrição e Histórico
+        </h5>
+
+        <div class="mb-3">
+            <label for="description" class="form-label">Descrição / Histórico do Paciente</label>
+            <textarea class="form-control" id="description" name="description" rows="10"
+                      placeholder="Inclua informações relevantes como:
+- Histórico familiar
+- Desenvolvimento motor e cognitivo
+- Contexto escolar
+- Comportamentos observados
+- Intervenções anteriores
+- Medicações em uso
+- Comorbidades
+- Pontos fortes e desafios
+- Objetivos terapêuticos">{{ patient.description or '' }}</textarea>
+            <div class="mt-2">
+                <small class="text-muted">
+                    <strong>Caracteres:</strong> <span id="descCharCount">0</span> |
+                    <strong>Palavras:</strong> <span id="descWordCount">0</span> |
+                    <strong>Linhas:</strong> <span id="descLineCount">0</span>
+                </small>
+            </div>
+        </div>
+
+        <div class="alert alert-warning border-start border-4 border-warning">
+            <i class="bi bi-shield-check"></i>
+            <strong>Confidencialidade:</strong> Todas as informações são armazenadas de forma segura e privada,
+            acessíveis apenas por você.
+        </div>
+    </div>
+
+    <!-- Botões de Ação -->
+    <div class="d-flex gap-2 mb-4">
+        <button type="submit" class="btn btn-primary btn-lg" id="submitBtn">
+            <i class="bi bi-check-circle"></i> Atualizar Paciente
+        </button>
+        <a href="{{ url_for('patients_list') }}" class="btn btn-outline-secondary btn-lg">
+            <i class="bi bi-x-circle"></i> Cancelar
+        </a>
+    </div>
+</form>
+
+{% block extra_js %}
+<script>
+    const birthDateInput = document.getElementById('date_of_birth');
+    const ageInput = document.getElementById('age');
+    const ageDisplay = document.getElementById('age-display');
+    const descriptionArea = document.getElementById('description');
+    const descCharCount = document.getElementById('descCharCount');
+    const descWordCount = document.getElementById('descWordCount');
+    const descLineCount = document.getElementById('descLineCount');
+    const outrosCheckbox = document.getElementById('diag_outros');
+    const outrosContainer = document.getElementById('outros-container');
+    const diagnosisOtherInput = document.getElementById('diagnosis_other');
+    const patientForm = document.getElementById('patientForm');
+    const submitBtn = document.getElementById('submitBtn');
+
+    // Calcular idade automaticamente quando a data mudar
+    birthDateInput.addEventListener('change', function() {
+        if (this.value) {
+            const birthDate = new Date(this.value);
+            const today = new Date();
+            let age = today.getFullYear() - birthDate.getFullYear();
+            const monthDiff = today.getMonth() - birthDate.getMonth();
+
+            if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
+                age--;
+            }
+
+            ageInput.value = age;
+            ageDisplay.textContent = age + ' anos';
+
+            // Mostrar alerta se idade incomum
+            if (age < 0) {
+                ageDisplay.textContent = 'Data inválida';
+                ageDisplay.style.color = '#dc3545';
+            } else if (age > 100) {
+                ageDisplay.textContent = age + ' anos (Verificar data)';
+                ageDisplay.style.color = '#ffc107';
+            } else {
+                ageDisplay.style.color = '#4a6fa5';
+            }
+        }
+    });
+
+    // Calcular idade ao carregar a página (já que já temos a idade)
+    if (birthDateInput.value) {
+        birthDateInput.dispatchEvent(new Event('change'));
+    }
+
+    // Atualizar idade se for alterada manualmente
+    ageInput.addEventListener('change', function() {
+        ageDisplay.textContent = this.value + ' anos';
+    });
+
+    // Contador de texto para descrição
+    descriptionArea.addEventListener('input', function() {
+        const text = this.value;
+        descCharCount.textContent = text.length.toLocaleString('pt-BR');
+
+        const words = text.trim().split(/\s+/).filter(word => word.length > 0);
+        descWordCount.textContent = words.length.toLocaleString('pt-BR');
+
+        const lines = text.split('\n').length;
+        descLineCount.textContent = lines.toLocaleString('pt-BR');
+    });
+
+    // Inicializar contadores
+    descriptionArea.dispatchEvent(new Event('input'));
+
+    // Mostrar/ocultar campo "Outros"
+    outrosCheckbox.addEventListener('change', function() {
+        if (this.checked) {
+            outrosContainer.style.display = 'block';
+            diagnosisOtherInput.required = true;
+        } else {
+            outrosContainer.style.display = 'none';
+            diagnosisOtherInput.required = false;
+            diagnosisOtherInput.value = '';
+        }
+    });
+
+    // Validação antes de enviar
+    patientForm.addEventListener('submit', function(e) {
+        e.preventDefault();
+
+        // Validar se pelo menos um diagnóstico foi selecionado ou está em avaliação
+        const checkboxes = document.querySelectorAll('input[name="diagnosis"]:checked');
+
+        // Validar campo "Outros"
+        if (outrosCheckbox.checked && !diagnosisOtherInput.value.trim()) {
+            alert('Por favor, especifique o diagnóstico no campo "Outros".');
+            diagnosisOtherInput.focus();
+            return;
+        }
+
+        // Validar idade
+        const ageValue = parseInt(ageInput.value);
+        if (isNaN(ageValue) || ageValue < 0 || ageValue > 120) {
+            alert('Por favor, verifique a idade. O valor parece incorreto.');
+            ageInput.focus();
+            return;
+        }
+
+        // Confirmar atualização
+        const name = document.getElementById('first_name').value + ' ' + document.getElementById('last_name').value;
+        if (confirm(`Confirma a atualização do paciente ${name}?`)) {
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Atualizando...';
+            this.submit();
+        }
+    });
+
+    // Prevenir perda de dados
+    let formModified = false;
+
+    patientForm.querySelectorAll('input, select, textarea').forEach(element => {
+        element.addEventListener('change', () => formModified = true);
+    });
+
+    window.addEventListener('beforeunload', function(e) {
+        if (formModified) {
+            e.preventDefault();
+            e.returnValue = 'Você tem alterações não salvas. Deseja realmente sair?';
+            return e.returnValue;
+        }
+    });
+
+    // Data máxima = hoje
+    const todayStr = new Date().toISOString().split('T')[0];
+    birthDateInput.setAttribute('max', todayStr);
+
+    // Funções para manipular sensibilidades
+    function addSensibility() {
+        const container = document.getElementById('sensitivities-container');
+        const newItem = document.createElement('div');
+        newItem.className = 'sensibility-item mb-3 p-3 border rounded';
+        newItem.innerHTML = `
+            <div class="row">
+                <div class="col-md-4 mb-2">
+                    <label class="form-label">Tipo de Sensibilidade</label>
+                    <select class="form-select" name="sensitivity_types[]">
+                        <option value="">Selecione...</option>
+                        <option value="Luz">Luz</option>
+                        <option value="Som">Som</option>
+                        <option value="Toque">Toque</option>
+                        <option value="Textura">Textura</option>
+                        <option value="Cheiro">Cheiro</option>
+                        <option value="Gosto">Gosto</option>
+                        <option value="Movimento">Movimento</option>
+                        <option value="Temperatura">Temperatura</option>
+                        <option value="Outro">Outro</option>
+                    </select>
+                </div>
+                <div class="col-md-4 mb-2">
+                    <label class="form-label">Nível de Sensibilidade</label>
+                    <select class="form-select" name="sensitivity_levels[]">
+                        <option value="">Selecione...</option>
+                        <option value="Baixo">Baixo</option>
+                        <option value="Médio">Médio</option>
+                        <option value="Alto">Alto</option>
+                        <option value="Muito Alto">Muito Alto</option>
+                    </select>
+                </div>
+                <div class="col-md-4 mb-2">
+                    <label class="form-label">Descrição</label>
+                    <input type="text" class="form-control" name="sensitivity_descriptions[]" placeholder="Ex: Sensibilidade à luz fluorescente">
+                </div>
+            </div>
+            <div class="d-flex justify-content-end">
+                <button type="button" class="btn btn-danger btn-sm" onclick="removeSensibility(this)">Remover</button>
+            </div>
+        `;
+        container.appendChild(newItem);
+    }
+
+    function removeSensibility(button) {
+        const item = button.closest('.sensibility-item');
+        if (document.querySelectorAll('.sensibility-item').length > 1) {
+            item.remove();
+        } else {
+            alert('Você deve ter pelo menos uma sensibilidade registrada.');
+        }
+    }
+
+    // Inicializar com pelo menos um campo de sensibilidade
+    document.addEventListener('DOMContentLoaded', function() {
+        const container = document.getElementById('sensitivities-container');
+        if (container && container.children.length === 0) {
+            addSensibility();
+        }
+    });
+
+    // Inicializar estado do campo "Outros" baseado no valor existente
+    if (outrosCheckbox.checked) {
+        outrosContainer.style.display = 'block';
+        diagnosisOtherInput.required = true;
+    }
+</script>
+{% endblock %}
+{% endblock %}

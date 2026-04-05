@@ -1,6 +1,6 @@
 """
-Módulo para seleção inteligente de modelos com fallback automático
-Implementa aprendizado com base nas inferências dos usuários
+Módulo para seleção inteligente de modelos com fallback automático entre Gemini e OpenAI.
+Fallback para modelos locais está DESATIVADO.
 """
 import logging
 import time
@@ -16,7 +16,8 @@ logger = logging.getLogger(__name__)
 
 class ModelSelector:
     """
-    Selecionador inteligente de modelos com fallback automático e aprendizado
+    Selecionador inteligente de modelos com fallback automático entre Gemini e OpenAI.
+    Modelos locais estão DESATIVADOS.
     """
 
     def __init__(self, gemini_interface: ClinicalGeminiInterface, openai_interface: ClinicalOpenAIInterface = None):
@@ -227,12 +228,16 @@ class ModelSelector:
                         # Registrar inferência com falha
                         self._log_inference(fallback_model, rag_result.get('query', ''), 0, response_time, False, str(fallback_error))
 
-            # Se todos os modelos falharem ou fallback desabilitado, retornar mensagem de erro
+            # Se todos os modelos falharem (Gemini e OpenAI), retornar mensagem de erro
             error_msg = f"Falha ao gerar resposta com {primary_model}."
             if fallback_enabled:
-                error_msg += f" Fallback também falhou."
-
-            return f"Erro: {error_msg}", primary_model
+                error_msg += f" Fallback (Gemini/OpenAI) também falhou."
+            
+            # Fallback local está DESATIVADO
+            error_msg += " Modelos locais estão DESATIVADOS."
+            
+            logger.error(f"❌ {error_msg}")
+            raise RuntimeError(f"{error_msg} Configure Gemini ou OpenAI.")
     
     def _log_inference(self, model_name: str, query: str, response_length: int, 
                       response_time: float, success: bool, error: str = None):
