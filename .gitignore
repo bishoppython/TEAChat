@@ -2,6 +2,12 @@
 venv/
 env/
 __pycache__/
+**/__pycache__/
+*.pyc
+*.pyo
+
+# Ambientes virtuais dentro de subpastas (ex: testes/env_tst/)
+testes/env_tst/
 *.pyc
 *.pyo
 
