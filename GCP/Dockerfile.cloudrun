@@ -28,8 +28,11 @@ COPY requirements.txt .
 RUN pip install --no-cache-dir --upgrade pip && \
     pip install --no-cache-dir -r requirements.txt
 
-# Baixar dados NLTK no stage de build
-RUN python -m nltk.downloader -d /opt/nltk_data punkt punkt_tab
+# Baixar dados NLTK no stage de build (via Python API para garantir uso do venv)
+RUN python -c "\
+import nltk; \
+datasets = ['punkt', 'punkt_tab', 'stopwords', 'averaged_perceptron_tagger', 'averaged_perceptron_tagger_eng']; \
+[nltk.download(d, download_dir='/opt/nltk_data', quiet=False) for d in datasets]"
 
 # --- Stage 2: Imagem de produção mínima ---
 FROM python:3.11-slim AS production
