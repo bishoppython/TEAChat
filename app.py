@@ -530,7 +530,9 @@ async def startup_event():
 
     except Exception as e:
         logger.error(f"Falha ao inicializar sistema clínico: {e}")
-        raise
+        logger.warning("A aplicação iniciará em modo degradado. Verifique DATABASE_URL e as chaves de API.")
+        # Não re-levanta a exceção para permitir que o uvicorn abra a porta 8080
+        # O endpoint /health reportará que o sistema não está inicializado
 
 @app.get("/")
 async def root():

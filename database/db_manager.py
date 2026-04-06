@@ -15,7 +15,7 @@ from contextlib import contextmanager
 try:
     from langchain.text_splitter import RecursiveCharacterTextSplitter
 except ImportError:
-    from langchain_core.text_splitter import RecursiveCharacterTextSplitter
+    from langchain_text_splitters import RecursiveCharacterTextSplitter
 import json
 
 # Import the multi-model embedding generator
